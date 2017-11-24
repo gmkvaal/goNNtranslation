@@ -10,6 +10,8 @@ import (
 	"math"
 )
 
+// NOTE: Maybe not so smart with all these global variables?
+
 // Variables to hold the activation(s) for one node,
 // nodes on one layer, and all layers, respectively
 var zNode float64
@@ -23,6 +25,11 @@ var activationNode float64
 var activationNewLayer []float64
 var activationLayer []float64
 var activationAllLayers [][]float64
+
+var deltaOutputLayer []float64
+
+var nablaW [][][]float64
+var nablaB [][]float64
 
 // networkFormat contains the
 // fields sizes, biases, and weights
@@ -40,8 +47,7 @@ func randomFunc() func() float64 {
 	}
 }
 
-// randomFunc returns a func that
-// returns a zero
+// randomFunc returns a func that returns a zero
 func zeroFunc() func() float64 {
 	return func() float64 {
 		return 0.0
@@ -51,7 +57,6 @@ func zeroFunc() func() float64 {
 // setWeightsAndBiases initiates the weights
 // and biases with random numbers
 func (nf *networkFormat) setWeightsAndBiases() {
-
 	nf.weights = nf.cubicMatrix(randomFunc())
 	nf.biases = nf.squareMatrix(randomFunc())
 }
@@ -100,6 +105,16 @@ func dot(a []float64, b []float64) float64 {
 	return product
 }
 
+func vectorMatrixProduct(matrix [][]float64, a []float64, b []float64) [][]float64{
+	for i := 0; i < len(a); i++ {
+		for j := 0; j < len(b); j++ {
+			matrix[j][i] = a[i]*b[j]
+		}
+	}
+
+	return matrix
+}
+
 // sigmoid returns the sigmoid function
 func sigmoid(z float64) float64 {
 	return 1.0 / (1.0 + math.Exp(-z))
@@ -111,37 +126,28 @@ func sigmoidPrime(z float64) float64 {
 }
 
 // delta returns the error at a given neuron
-func neuronError(z float64, a float64, y float64) float64 {
+func outputNeuronError(z float64, a float64, y float64) float64 {
 	return (a - y) * sigmoidPrime(z)
 }
 
-// backProp performs one iteration of the backpropagation
-// algorithm for input x and training output y
-func (nf networkFormat) backProp(x []float64, y [10]float64) {
-
-	//nablaW := nf.cubicMatrix(0.0)
-	//nablaB := nf.squareMatrix(0.0)
-
-	// Clearing / preparing the slices
-	zAllLayers = nil
-	activationLayer = x
-	activationAllLayers = [][]float64{x}
+// forwardFeed updates all neurons from the activations. Depends on being
+// called inside the scope of backProp where activationLayers are defined (dangerous?)
+func (nf networkFormat) forwardFeed () ([][]float64, [][]float64){
 
 	// Iterating through the layers
-	for i := 0; i < len(nf.biases); i++ {
+	for k := 0; k < len(nf.biases); k++ {
 
 		// Computing the activations for nodes on a single layer
 		// NB: NEED TO SCALE IN THE INPUT SO THAT THE NEURONS
-		// DOESNT GET INSTANTLY SATURATED
-		for idx := range nf.weights[i] {
-			zNode = dot(activationLayer, nf.weights[i][idx]) + nf.biases[i][idx]
+		// DOES NOT GET INSTANTLY SATURATED
+		for idx := range nf.weights[k] {
+			zNode = dot(activationLayer, nf.weights[k][idx]) + nf.biases[k][idx]
 			zLayer = append(zLayer, zNode)
 			activationNode = sigmoid(zNode)
 			activationNewLayer = append(activationNewLayer, activationNode)
 		}
 
 		activationLayer = activationNewLayer
-
 		zAllLayers = append(zAllLayers, zLayer)
 		activationAllLayers = append(activationAllLayers, activationLayer)
 
@@ -150,15 +156,59 @@ func (nf networkFormat) backProp(x []float64, y [10]float64) {
 		activationNewLayer = nil
 	}
 
-	fmt.Println(activationAllLayers)
+	return zAllLayers, activationAllLayers
+}
+
+// outputError computes the output error (delta L) by Looping over output neurons.
+func (nf networkFormat) outputError (y [10]float64) []float64 {
+	for idx := range activationAllLayers[len(activationAllLayers)-1] {
+		z := zAllLayers[len(zAllLayers)-1][idx]
+		a := activationAllLayers[len(activationAllLayers)-1][idx]
+		deltaOutputNeuron := outputNeuronError(z, a, y[idx])
+		deltaOutputLayer = append(deltaOutputLayer, deltaOutputNeuron)
+	}
+
+	return deltaOutputLayer
+
+}
+
+// backProp performs one iteration of the backpropagation
+// algorithm for input x and training output y
+func (nf networkFormat) backProp(x []float64, y [10]float64) {
+
+	// Initiating the gradient matrices
+	nablaW = nf.cubicMatrix(zeroFunc())
+	nablaB = nf.squareMatrix(zeroFunc())
+	l := len(nf.sizes) - 1// last entry "layer-vise"
+	lNab := len(nablaW) -1 // last entry
+	fmt.Println("l is", l)
+
+	// Clearing / preparing the slices
+	zAllLayers = nil
+	activationLayer = x
+	activationAllLayers = [][]float64{x}
+
+	// Updating all neurons with the forwardFeed algorithmn
+	zAllLayers, activationAllLayers = nf.forwardFeed()
+
+	// Computing the output error (delta L).
+	delta := nf.outputError(y)
+	nablaB[lNab] = delta
+	nablaW[lNab] = vectorMatrixProduct(nablaW[lNab], activationAllLayers[l-1], delta)
+
+
+
+
+
+
 
 
 }
 
 func customSliceToFloat64Slice(s GoMNIST.RawImage) []float64 {
 
-	// Divinding on 255.0 to scale the input in
-	// to the range 0 - 1.
+	// Divinding on 255.0 to scale the
+	// input into the range 0 - 1.
 	var normalSlice []float64
 	for idx := range s {
 		normalSlice = append(normalSlice, float64(s[idx])/255.0)
@@ -202,57 +252,10 @@ func main() {
 	y := labelArr
 	x := customSliceToFloat64Slice(image)
 
-	nf := &networkFormat{sizes: []int{784, 30, 10}}
-	nf.setWeightsAndBiases()
-
 	fmt.Println("")
 
+	nf := &networkFormat{sizes: []int{784, 30, 10}}
+	nf.setWeightsAndBiases()
 	nf.backProp(x, y)
 
-	/*
-		sizes := []int{786, 30, 10}
-		w := make([][][]float64, len(sizes[1:]))
-
-		for k := range w {
-			w[k] = make([][]float64, sizes[k+1])
-
-			for j := 0; j < sizes[k+1]; j++ {
-				w[k][j] = make([]float64, sizes[k])
-
-				for i := 0; i < sizes[k]; i++ {
-					w[k][j][i] = rand.Float64()
-				}
-			}
-		}
-
-
-		fmt.Println(w[0])
-	*/
-	//nf := networkFormat{}
-	//nf.initializeNetwork([784, 30, 10])
-
-	//wb := weightsAndBiases{}
-	//wb.largeWeightInitializer()
-	//fmt.Println(wb.weights)
-
-	/*
-		for i := 0; i < len(nf.biases); i++ {
-			//b := nf.biases[i]
-			//w := nf.weights[i]
-
-			biasVec := mat64.NewVector(len(nf.biases[i]), nf.biases[i])
-			//weightVec := mat64.NewVector(len(nf.weights[i]), nf.weights[i][1])
-
-			//fmt.Println(weightVec.Dims())
-			//fmt.Println(activationVec.Dims())
-			//fmt.Println(biasVec.Dims())
-
-			for idx := range nf.weights[i] {
-				weightVec := mat64.NewVector(len(nf.weights[i][idx]), nf.weights[i][idx])
-				fmt.Println(weightVec.Dims())
-				fmt.Println(activationVec.Dims())
-				fmt.Println(biasVec.Dims())
-				fmt.Println("")
-			}
-	*/
 }
