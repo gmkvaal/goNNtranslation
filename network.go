@@ -1,13 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/petar/GoMNIST"
 	"log"
-	"math/rand"
-
-	"math"
 )
 
 // NOTE: Maybe not so smart with all these global variables?
@@ -39,20 +35,6 @@ type networkFormat struct {
 	weights [][][]float64
 }
 
-// randomFunc returns a func that
-// generates a random number
-func randomFunc() func() float64 {
-	return func() float64 {
-		return float64(rand.NormFloat64())
-	}
-}
-
-// randomFunc returns a func that returns a zero
-func zeroFunc() func() float64 {
-	return func() float64 {
-		return 0.0
-	}
-}
 
 // setWeightsAndBiases initiates the weights
 // and biases with random numbers
@@ -93,41 +75,6 @@ func (nf networkFormat) cubicMatrix(input func() float64) [][][]float64 {
 	}
 
 	return w
-}
-
-// dot performs the dot product of two slices a and b
-func dot(a []float64, b []float64) float64 {
-	var product float64
-	for idx := range a {
-		product += a[idx] + b[idx]
-	}
-
-	return product
-}
-
-func vectorMatrixProduct(matrix [][]float64, a []float64, b []float64) [][]float64{
-	for i := 0; i < len(a); i++ {
-		for j := 0; j < len(b); j++ {
-			matrix[j][i] = a[i]*b[j]
-		}
-	}
-
-	return matrix
-}
-
-// sigmoid returns the sigmoid function
-func sigmoid(z float64) float64 {
-	return 1.0 / (1.0 + math.Exp(-z))
-}
-
-// sigmoidPrime returns the differentiated sigmoid function
-func sigmoidPrime(z float64) float64 {
-	return sigmoid(z) * (1 - sigmoid(z))
-}
-
-// delta returns the error at a given neuron
-func outputNeuronError(z float64, a float64, y float64) float64 {
-	return (a - y) * sigmoidPrime(z)
 }
 
 // forwardFeed updates all neurons from the activations. Depends on being
@@ -195,42 +142,8 @@ func (nf networkFormat) backProp(x []float64, y [10]float64) {
 	delta := nf.outputError(y)
 	nablaB[lNab] = delta
 	nablaW[lNab] = vectorMatrixProduct(nablaW[lNab], activationAllLayers[l-1], delta)
-
-
-
-
-
-
-
-
 }
 
-func customSliceToFloat64Slice(s GoMNIST.RawImage) []float64 {
-
-	// Divinding on 255.0 to scale the
-	// input into the range 0 - 1.
-	var normalSlice []float64
-	for idx := range s {
-		normalSlice = append(normalSlice, float64(s[idx])/255.0)
-	}
-
-	return normalSlice
-}
-
-// labelToArray converts the base integers into an
-// array with '1' at the respective entry, rest 0
-func labelToArray(label int) ([10]float64, error) {
-
-	tennerArray := [10]float64{}
-
-	if label > 9 {
-		return tennerArray, errors.New("wrong format - can only convert numbers < 9")
-	}
-
-	tennerArray[label] = 1
-
-	return tennerArray, nil
-}
 
 func main() {
 
