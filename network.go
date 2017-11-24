@@ -1,54 +1,48 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
-	//"github.com/petar/GoMNIST"
-	//"log"
 	"errors"
+	"fmt"
 	"github.com/petar/GoMNIST"
 	"log"
+	"math/rand"
 
 	"math"
 )
 
+// Variables to hold the activation(s) for one node,
+// nodes on one layer, and all layers, respectively
+var zNode float64
+var zLayer []float64
+var zAllLayers [][]float64
 
-
-// labelToArray converts the base integers into an
-// array with '1' at the respective entry, rest 0
-func labelToArray(label int) ([10]float64, error) {
-
-	tennerArray := [10]float64{}
-
-	if label > 9 {
-		return tennerArray, errors.New("wrong format - can only convert numbers < 9")
-	}
-
-	tennerArray[label] = 1
-
-	return tennerArray, nil
-}
+// Variables to hold the sigmoid(s) for one node,
+// nodes on a new layer, input layer, and every
+// layer, respectively.
+var activationNode float64
+var activationNewLayer []float64
+var activationLayer []float64
+var activationAllLayers [][]float64
 
 // networkFormat contains the
 // fields sizes, biases, and weights
 type networkFormat struct {
-	sizes []int
-	biases [][]float64
+	sizes   []int
+	biases  [][]float64
 	weights [][][]float64
 }
 
-
 // randomFunc returns a func that
 // generates a random number
-func randomFunc () func() float64 {
+func randomFunc() func() float64 {
 	return func() float64 {
-		return float64(rand.Float64())
+		return float64(rand.NormFloat64())
 	}
 }
 
 // randomFunc returns a func that
 // returns a zero
-func zeroFunc () func() float64 {
+func zeroFunc() func() float64 {
 	return func() float64 {
 		return 0.0
 	}
@@ -62,8 +56,7 @@ func (nf *networkFormat) setWeightsAndBiases() {
 	nf.biases = nf.squareMatrix(randomFunc())
 }
 
-
-// squareMatrix creates a square matrix with entries from input
+// squareMatrix creates a square matrix with entries from input function
 func (nf networkFormat) squareMatrix(input func() float64) [][]float64 {
 	b := make([][]float64, len(nf.sizes[1:]))
 
@@ -78,7 +71,7 @@ func (nf networkFormat) squareMatrix(input func() float64) [][]float64 {
 	return b
 }
 
-// cubicMatrix creates a square matrix with entries from input
+// cubicMatrix creates a square matrix with entries from input function
 func (nf networkFormat) cubicMatrix(input func() float64) [][][]float64 {
 	w := make([][][]float64, len(nf.sizes[1:]))
 
@@ -114,12 +107,12 @@ func sigmoid(z float64) float64 {
 
 // sigmoidPrime returns the differentiated sigmoid function
 func sigmoidPrime(z float64) float64 {
-	return sigmoid(z)*(1 - sigmoid(z))
+	return sigmoid(z) * (1 - sigmoid(z))
 }
 
 // delta returns the error at a given neuron
 func neuronError(z float64, a float64, y float64) float64 {
-	return (a-y) * sigmoidPrime(z)
+	return (a - y) * sigmoidPrime(z)
 }
 
 // backProp performs one iteration of the backpropagation
@@ -129,71 +122,74 @@ func (nf networkFormat) backProp(x []float64, y [10]float64) {
 	//nablaW := nf.cubicMatrix(0.0)
 	//nablaB := nf.squareMatrix(0.0)
 
-	activation := x
-	activations := [][]float64{x}
+	// Clearing / preparing the slices
+	zAllLayers = nil
+	activationLayer = x
+	activationAllLayers = [][]float64{x}
 
 	// Iterating through the layers
 	for i := 0; i < len(nf.biases); i++ {
-		//b :=e nf.biases[i]
-		//w := nf.weights[i]
 
-		//weightVec := mat64.NewVector(len(nf.weights[i]), nf.weights[i][1])
-		//biasVec := mat64.NewVector(len(nf.biases[i]), nf.biases[i])
-		//fmt.Println(weightVec.Dims())
-		//fmt.Println(activationVec.Dims())
-		//fmt.Println(biasVec.Dims())
-
-		var zs []float64
-		var z float64
-		var sigs []float64
-		var sig float64
-
-		// Computing the activations
-		// (sigmoids) for all nodes
+		// Computing the activations for nodes on a single layer
+		// NB: NEED TO SCALE IN THE INPUT SO THAT THE NEURONS
+		// DOESNT GET INSTANTLY SATURATED
 		for idx := range nf.weights[i] {
-			z = dot(activation, nf.weights[i][idx]) + nf.biases[i][idx]
-			zs = append(zs, z)
-			sig = sigmoid(z)
-			sigs = append(sigs, sig)
-
-		}
-		activation = zs
-		activations = append(activations, activation)
-
-		var delta []float64
-
-		for idx := range activations[len(activations)] {
-			delta = append(delta, neuronError(zs[len(zs)], activations[len(activations)][idx], y[idx]))
+			zNode = dot(activationLayer, nf.weights[i][idx]) + nf.biases[i][idx]
+			zLayer = append(zLayer, zNode)
+			activationNode = sigmoid(zNode)
+			activationNewLayer = append(activationNewLayer, activationNode)
 		}
 
-		//fmt.Println(activationVec.Dims())
-		//fmt.Println(biasVec.Dims())
+		activationLayer = activationNewLayer
 
+		zAllLayers = append(zAllLayers, zLayer)
+		activationAllLayers = append(activationAllLayers, activationLayer)
 
-
+		// Clearing the slices
+		zLayer = nil
+		activationNewLayer = nil
 	}
-}
 
+	fmt.Println(activationAllLayers)
+
+
+}
 
 func customSliceToFloat64Slice(s GoMNIST.RawImage) []float64 {
 
+	// Divinding on 255.0 to scale the input in
+	// to the range 0 - 1.
 	var normalSlice []float64
-	for idx:= range s {
-		normalSlice = append(normalSlice, float64(s[idx]))
+	for idx := range s {
+		normalSlice = append(normalSlice, float64(s[idx])/255.0)
 	}
 
 	return normalSlice
-
 }
 
+// labelToArray converts the base integers into an
+// array with '1' at the respective entry, rest 0
+func labelToArray(label int) ([10]float64, error) {
 
-func main () {
+	tennerArray := [10]float64{}
 
-	train, _, err := GoMNIST.Load("./data")
+	if label > 9 {
+		return tennerArray, errors.New("wrong format - can only convert numbers < 9")
+	}
+
+	tennerArray[label] = 1
+
+	return tennerArray, nil
+}
+
+func main() {
+
+
+	// Load files of type GoMNIST which is actually []byte, where the byte value
+	train, _, err := GoMNIST.Load("/home/guttorm/xal/go/src/github.com/petar/GoMNIST/data")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 
 	sweeper := train.Sweep()
 	image, label, _ := sweeper.Next()
@@ -209,30 +205,28 @@ func main () {
 	nf := &networkFormat{sizes: []int{784, 30, 10}}
 	nf.setWeightsAndBiases()
 
-	fmt.Println(x)
+	fmt.Println("")
 
 	nf.backProp(x, y)
 
-
-
 	/*
-	sizes := []int{786, 30, 10}
-	w := make([][][]float64, len(sizes[1:]))
+		sizes := []int{786, 30, 10}
+		w := make([][][]float64, len(sizes[1:]))
 
-	for k := range w {
-		w[k] = make([][]float64, sizes[k+1])
+		for k := range w {
+			w[k] = make([][]float64, sizes[k+1])
 
-		for j := 0; j < sizes[k+1]; j++ {
-			w[k][j] = make([]float64, sizes[k])
+			for j := 0; j < sizes[k+1]; j++ {
+				w[k][j] = make([]float64, sizes[k])
 
-			for i := 0; i < sizes[k]; i++ {
-				w[k][j][i] = rand.Float64()
+				for i := 0; i < sizes[k]; i++ {
+					w[k][j][i] = rand.Float64()
+				}
 			}
 		}
-	}
 
 
-	fmt.Println(w[0])
+		fmt.Println(w[0])
 	*/
 	//nf := networkFormat{}
 	//nf.initializeNetwork([784, 30, 10])
@@ -242,23 +236,23 @@ func main () {
 	//fmt.Println(wb.weights)
 
 	/*
-	for i := 0; i < len(nf.biases); i++ {
-		//b := nf.biases[i]
-		//w := nf.weights[i]
+		for i := 0; i < len(nf.biases); i++ {
+			//b := nf.biases[i]
+			//w := nf.weights[i]
 
-		biasVec := mat64.NewVector(len(nf.biases[i]), nf.biases[i])
-		//weightVec := mat64.NewVector(len(nf.weights[i]), nf.weights[i][1])
+			biasVec := mat64.NewVector(len(nf.biases[i]), nf.biases[i])
+			//weightVec := mat64.NewVector(len(nf.weights[i]), nf.weights[i][1])
 
-		//fmt.Println(weightVec.Dims())
-		//fmt.Println(activationVec.Dims())
-		//fmt.Println(biasVec.Dims())
+			//fmt.Println(weightVec.Dims())
+			//fmt.Println(activationVec.Dims())
+			//fmt.Println(biasVec.Dims())
 
-		for idx := range nf.weights[i] {
-			weightVec := mat64.NewVector(len(nf.weights[i][idx]), nf.weights[i][idx])
-			fmt.Println(weightVec.Dims())
-			fmt.Println(activationVec.Dims())
-			fmt.Println(biasVec.Dims())
-			fmt.Println("")
-		}
+			for idx := range nf.weights[i] {
+				weightVec := mat64.NewVector(len(nf.weights[i][idx]), nf.weights[i][idx])
+				fmt.Println(weightVec.Dims())
+				fmt.Println(activationVec.Dims())
+				fmt.Println(biasVec.Dims())
+				fmt.Println("")
+			}
 	*/
-	}
+}
