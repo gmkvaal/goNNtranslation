@@ -16,7 +16,7 @@ func dot(a []float64, b []float64) float64 {
 func vectorMatrixProduct(matrix [][]float64, a []float64, b []float64) [][]float64{
 	for i := 0; i < len(a); i++ {
 		for j := 0; j < len(b); j++ {
-			matrix[j][i] = a[i]*b[j]
+			matrix[i][j] = a[i]*b[j]
 		}
 	}
 

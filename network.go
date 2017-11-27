@@ -24,11 +24,9 @@ var activationNewLayer []float64
 var activationLayer []float64
 var activationAllLayers [][]float64
 
-var deltaNeuron float64
-var deltaAllLayers [][]float64
+var delta [][]float64
 
-var nablaW [][][]float64
-var nablaB [][]float64
+
 
 var sigPrimeLayer []float64
 
@@ -39,25 +37,52 @@ type networkFormat struct {
 	sizes   []int
 	biases  [][]float64
 	weights [][][]float64
+	delta [][]float64
+	nablaW [][][]float64
+	nablaB [][]float64
+	z [][]float64
+	activations [][]float64
+
 }
 
-
-// setWeightsAndBiases initiates the weights
+// initNetwork initiates the weights
 // and biases with random numbers
-func (nf *networkFormat) setWeightsAndBiases() {
+func (nf *networkFormat) initNetwork() {
 	nf.weights = nf.cubicMatrix(randomFunc())
 	nf.biases = nf.squareMatrix(randomFunc())
+	nf.delta = nf.squareMatrix(zeroFunc())
+	nf.nablaW = nf.cubicMatrix(zeroFunc())
+	nf.nablaB = nf.squareMatrix(zeroFunc())
+	nf.z = nf.squareMatrix(zeroFunc())
+	nf.activations = nf.squareMatrixFull(zeroFunc())
 }
 
+
+
 // squareMatrix creates a square matrix with entries from input function
-func (nf networkFormat) squareMatrix(input func() float64) [][]float64 {
+func (nf networkFormat) squareMatrix(input func(int) float64) [][]float64 {
 	b := make([][]float64, len(nf.sizes[1:]))
 
 	for k := range b {
 		b[k] = make([]float64, nf.sizes[k+1])
 
 		for j := 0; j < nf.sizes[k+1]; j++ {
-			b[k][j] = input()
+			b[k][j] = input(nf.sizes[k+1])
+		}
+	}
+
+	return b
+}
+
+// squareMatrix creates a square matrix with entries from input function
+func (nf networkFormat) squareMatrixFull(input func(int) float64) [][]float64 {
+	b := make([][]float64, len(nf.sizes))
+
+	for k := range b {
+		b[k] = make([]float64, nf.sizes[k])
+
+		for j := 0; j < nf.sizes[k]; j++ {
+			b[k][j] = input(nf.sizes[k])
 		}
 	}
 
@@ -65,7 +90,7 @@ func (nf networkFormat) squareMatrix(input func() float64) [][]float64 {
 }
 
 // cubicMatrix creates a square matrix with entries from input function
-func (nf networkFormat) cubicMatrix(input func() float64) [][][]float64 {
+func (nf networkFormat) cubicMatrix(input func(int) float64) [][][]float64 {
 	w := make([][][]float64, len(nf.sizes[1:]))
 
 	for k := range w {
@@ -75,7 +100,7 @@ func (nf networkFormat) cubicMatrix(input func() float64) [][][]float64 {
 			w[k][j] = make([]float64, nf.sizes[k])
 
 			for i := 0; i < nf.sizes[k]; i++ {
-				w[k][j][i] = input()
+				w[k][j][i] = input(nf.sizes[k])
 			}
 		}
 	}
@@ -83,139 +108,54 @@ func (nf networkFormat) cubicMatrix(input func() float64) [][][]float64 {
 	return w
 }
 
-/*
-// forwardFeed updates all neurons from the activations. Depends on being
-// called inside the scope of backProp where activationLayers are defined (dangerous?)
-func (nf networkFormat) forwardFeed () ([][]float64, [][]float64){
-
-	// Iterating through the layers
-	for k := 0; k < len(nf.biases); k++ {
-
-		// Computing the activations for nodes on a single layer
-		// NB: NEED TO SCALE IN THE INPUT SO THAT THE NEURONS
-		// DOES NOT GET INSTANTLY SATURATED
-		for idx := range nf.weights[k] {
-			zNode = dot(activationLayer, nf.weights[k][idx]) + nf.biases[k][idx]
-			zLayer = append(zLayer, zNode)
-			activationNode = sigmoid(zNode)
-			activationNewLayer = append(activationNewLayer, activationNode)
-		}
-
-		activationLayer = activationNewLayer
-		zAllLayers = append(zAllLayers, zLayer)
-		activationAllLayers = append(activationAllLayers, activationLayer)
-
-		// Clearing the slices
-		zLayer = nil
-		activationNewLayer = nil
-	}
-
-	return zAllLayers, activationAllLayers
-}
-
-// outputError computes the output error (delta L) by Looping over output neurons.
-func (nf networkFormat) outputError (y [10]float64) []float64 {
-	for idx := range activationAllLayers[len(activationAllLayers)-1] {
-		z := zAllLayers[len(zAllLayers)-1][idx]
-		a := activationAllLayers[len(activationAllLayers)-1][idx]
-		deltaNeuron := outputNeuronError(z, a, y[idx])
-		deltaLayer = append(deltaLayer, deltaNeuron)
-	}
-
-	return deltaLayer
-}
-*/
-
-
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-// NB: MAY SPLIT THIS FUNCTION INTO SMALLER ONES!!!
 func (nf networkFormat) backProp(x []float64, y [10]float64) ([][]float64, [][][]float64) {
 
 	// Initiating the gradient matrices
-	nablaW = nf.cubicMatrix(zeroFunc())
-	nablaB = nf.squareMatrix(zeroFunc())
-	deltaAllLayers = nf.squareMatrix(zeroFunc())
 	l := len(nf.sizes) - 1// last entry "layer-vise"
 
-
 	// Clearing / preparing the slices
-	zAllLayers = nil
-	activationLayer = x
-	activationAllLayers = [][]float64{x}
+	nf.activations[0] = x
 
 	// Updating all neurons with the forwardFeed algorithm
-	// Iterating through the layers
 	for k := 0; k < len(nf.biases); k++ {
-		// Computing the activations for nodes on a single layer
-		// NB: NEED TO SCALE IN THE INPUT SO THAT THE NEURONS
-		// DOES NOT GET INSTANTLY SATURATED
-		for idx := range nf.weights[k] {
-			zNode = dot(activationLayer, nf.weights[k][idx]) + nf.biases[k][idx]
-			zLayer = append(zLayer, zNode)
-			activationNode = sigmoid(zNode)
-			activationNewLayer = append(activationNewLayer, activationNode)
+		for i := range nf.weights[k] {
+			nf.z[k][i] = dot(nf.activations[k], nf.weights[k][i]) + nf.biases[k][i]
+			nf.activations[k+1][i] = sigmoid(nf.z[k][i])
 		}
-
-		activationLayer = activationNewLayer
-		zAllLayers = append(zAllLayers, zLayer)
-		activationAllLayers = append(activationAllLayers, activationLayer)
-
-		// Clearing the slices
-		zLayer = nil
-		activationNewLayer = nil
 	}
 
 	// Computing the output error (delta L).
-	for i := range activationAllLayers[len(activationAllLayers)-1] {
-		z := zAllLayers[len(zAllLayers)-1][i]
-		a := activationAllLayers[len(activationAllLayers)-1][i]
-		deltaAllLayers[l-1][i] = outputNeuronError(z, a, y[i])
+	for i := range nf.activations[l] {
+		nf.delta[l-1][i] = outputNeuronError(nf.z[l-1][i], nf.activations[l][i], y[i])
 	}
 
-	nablaB[l-1] = deltaAllLayers[l-1]
-	nablaW[l-1] = vectorMatrixProduct(nablaW[l-1], activationAllLayers[l-1], deltaAllLayers[l-1])
+	// Gradients at the output layer
+	nf.nablaB[l-1] = nf.delta[l-1]
+	nf.nablaW[l-1] = vectorMatrixProduct(nf.nablaW[l-1], nf.delta[l-1], nf.activations[l-1])
 
+	// Backpropagating the error
 	for k := 2; k < l + 1; k++ {
-		for j := 0; j < len(nf.weights[l+1-k]); j++  {
-			for i := 0; i < len(nf.weights[l+1-k][j]); i++ {
-				//fmt.Println("l=", l-k+1, " j=", j, " i=", i)
-				deltaAllLayers[l-k][j] += nf.weights[l+1-k][j][i] * deltaAllLayers[l+1-k][j] *
-					sigmoidPrime(zAllLayers[l-k][j])
-				fmt.Println("zig", zAllLayers[l-k][j])
-				nablaB[l-k][j] = deltaAllLayers[l-k][j]
-				nablaW[l-k][j][i] = deltaAllLayers[l-k][j] * activationAllLayers[l-k][j]
+		for j := 0; j < nf.sizes[l+1-k]; j++ {
+			for i := 0; i < nf.sizes[l+2-k]; i++ {
+				nf.delta[l-k][j] += nf.weights[l+1-k][i][j]*nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l+1-k][i])
+			}
+
+			nf.nablaB[l-k][j] = nf.delta[l-k][j]
+
+			for i := 0; i < nf.sizes[l-k]; i++ {
+				nf.nablaW[l-k][j][i] += nf.delta[l-k][j] * nf.activations[l-k][i]
 			}
 		}
+
 	}
-	return nablaB, nablaW
 
-
-
-	/*
-	// Backpropagating through the remaining layers
-	for k := 2; k < l + 1; k++ {
-		z := zAllLayers[l-k]
-
-		//Looping through each neuron at a given level
-		for i := 0; i < len(nf.weights[l-k+1]); i++ {
-			 sigPrimeLayer = append(sigPrimeLayer, sigmoidPrime(z[i]))
-
-			 dot(nf.weights[l-k+1][i], deltaLayer)
-
-			 // Computing the error for a given neuron
-			 for j := 0; j < len(nf.weights[l-k+1][i]); j++ {
-			 	 fmt.Println("l=", l-k+1, " j=", j, " i=", i)
-				 deltaLayer = append(deltaLayer, nf.weights[l-k+1][i][j] * deltaLayer[j])
-
-
-
-				 }
-			 }
-		}
-	*/
+	return nf.nablaB, nf.nablaW
 
 }
+
+
 
 
 func main() {
@@ -241,8 +181,8 @@ func main() {
 	fmt.Println("")
 
 	nf := &networkFormat{sizes: []int{784, 30, 10}}
-	nf.setWeightsAndBiases()
-	nablaB, nablaW = nf.backProp(x, y)
+	nf.initNetwork()
+	nf.nablaB, nf.nablaW = nf.backProp(x, y)
 
 	//fmt.Println(nablaW)
 }
