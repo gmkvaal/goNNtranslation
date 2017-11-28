@@ -3,19 +3,17 @@ package main
 import (
 	"github.com/petar/GoMNIST"
 	"log"
-	"fmt"
 )
 
-type trainingData struct {
+type Data struct {
 	trainingInput [][]float64
 	trainingOutput [][]float64
-}
-
-type validationData struct {
 	validationInput [][]float64
 	validationOutput [][]float64
 }
 
+// customSliceToFloat64Slice converts the entries of the loaded
+// MNIST data from a custom type to float64
 func customSliceToFloat64Slice(s GoMNIST.RawImage) []float64 {
 
 	// Divinding on 255.0 to scale the
@@ -43,22 +41,39 @@ func labelToArray(label int) ([]float64) {
 	return tennerArray
 }
 
-func (td *trainingData)initTrainingData (train *GoMNIST.Set) {
+// initTrainingData initiates trainingInput and trainingOutput
+// with data from MNIST. trainingInput is a slice containing slices (60000)
+// with data representing the pixel input (28*28). trainingOutput is a slice
+// containing equally many slices of length 10, with the value 1 at the
+// index corresponding to the input number (0-9).
+func (data *Data)initTrainingData (train *GoMNIST.Set) {
 	for i := 0; i < train.Count(); i++ {
 		inputSlice, outputNumber := train.Get(i)
-		td.trainingInput = append(td.trainingInput, customSliceToFloat64Slice(inputSlice))
-		td.trainingOutput = append(td.trainingOutput, labelToArray(int(outputNumber)))
+		data.trainingInput = append(data.trainingInput, customSliceToFloat64Slice(inputSlice))
+		data.trainingOutput = append(data.trainingOutput, labelToArray(int(outputNumber)))
 	}
 }
 
-func (td *trainingData)formatData() {
+// initValidationData initiates trainingInput and trainingOutput
+// with data from MNIST. validationInput is a slice containing slices (60000)
+// with data representing the pixel input (28*28). validationOutput is a slice
+// containing equally many slices of length 10, with the value 1 at the
+// index corresponding to the input number (0-9).
+func (data *Data)initValidationData (test *GoMNIST.Set) {
+	for i := 0; i < test.Count(); i++ {
+		inputSlice, outputNumber := test.Get(i)
+		data.validationInput = append(data.validationInput, customSliceToFloat64Slice(inputSlice))
+		data.validationOutput = append(data.validationOutput, labelToArray(int(outputNumber)))
+	}
+}
+
+// formatData loads the MNIST data and initiates the Data struct.
+func (data *Data)formatData() {
 	train, test, err := GoMNIST.Load("/home/guttorm/xal/go/src/github.com/petar/GoMNIST/data")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(train.Count())
-	fmt.Println(test.Count())
-
-	td.initTrainingData(train)
+	
+	data.initTrainingData(train)
+	data.initValidationData(test)
 }

@@ -89,7 +89,7 @@ func main() {
 	nf := &networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
 
-	td := trainingData{}
+	td := Data{}
 	td.formatData()
 
 	//nf.backProp(x, y)
