@@ -19,6 +19,17 @@ type networkFormat struct {
 	z           [][]float64
 	activations [][]float64
 	data
+	hyperParameters
+}
+
+type hyperParameters struct {
+	eta float64
+	lambda float64
+}
+
+func (hp *hyperParameters) setHyperParameters (eta float64, lambda float64) {
+	hp.eta = eta
+	hp.lambda = lambda
 }
 
 // initNetwork initiates the weights
@@ -35,10 +46,7 @@ func (nf *networkFormat) initNetwork() {
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (nf *networkFormat) backProp(x []float64, y []float64) {
-
-	fmt.Println(nf.nablaB[1])
-
+func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64, nablaB[][]float64) ([][][]float64, [][]float64){
 	var sum float64 = 0
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
@@ -59,8 +67,8 @@ func (nf *networkFormat) backProp(x []float64, y []float64) {
 	}
 
 	// Gradients at the output layer
-	nf.nablaB[l-1] = nf.delta[l-1]
-	nf.nablaW[l-1] = vectorMatrixProduct(nf.nablaW[l-1], nf.delta[l-1], nf.activations[l-1])
+	nablaB[l-1] = nf.delta[l-1]
+	nablaW[l-1] = vectorMatrixProduct(nablaW[l-1], nf.delta[l-1], nf.activations[l-1])
 
 	// Backpropagating the error
 	for k := 2; k < l+1; k++ {
@@ -70,55 +78,61 @@ func (nf *networkFormat) backProp(x []float64, y []float64) {
 				sum += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l+1-k][i])
 			}
 			nf.delta[l-k][j] = sum
-			nf.nablaB[l-k][j] +=  nf.delta[l-k][j]
+			nablaB[l-k][j] +=  nf.delta[l-k][j]
 
 			for i := 0; i < nf.sizes[l-k]; i++ {
-				nf.nablaW[l-k][j][i] += nf.delta[l-k][j] * nf.activations[l-k][i]
+				nablaW[l-k][j][i] += nf.delta[l-k][j] * nf.activations[l-k][i]
 			}
 		}
 	}
+
+	return nablaW, nablaB
 }
 
-func (nf *networkFormat) updateWeights(eta float64, lambda float64, n int, miniBatchSize int) {
+func (nf *networkFormat) updateWeights() {
 	for k := 0; k < len(nf.sizes) - 2; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			for i := 0; i < nf.sizes[k]; i++ {
 				//fmt.Println("k", k, "j", j, "i", i)
 				//fmt.Println(len(nf.weights[k][j]))
-				nf.weights[k][j][i] = (1 - eta*(lambda/float64(n)))*nf.weights[k][j][i] -
-					eta/float64(miniBatchSize) * nf.nablaW[k][j][i]
+				nf.weights[k][j][i] = (1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))*nf.weights[k][j][i] -
+					nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nf.nablaW[k][j][i]
 				nf.nablaW[k][j][i] = 0.0 // clearing for next batch
 			}
 		}
 	}
 }
 
-func (nf *networkFormat) updateBiases(eta float64, lambda float64, n int, miniBatchSize int) {
+func (nf *networkFormat) updateBiases() {
 	for k := 0; k < len(nf.sizes) - 2; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
-			nf.biases[k][j] = nf.biases[k][j] - eta/float64(miniBatchSize) * nf.nablaB[k][j]
+			nf.biases[k][j] = nf.biases[k][j] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nf.nablaB[k][j]
 			nf.nablaB[k][j] = 0
 		}
 	}
 }
 
 func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, miniBatchSize int) {
+	nablaW := nf.cubicMatrix(zeroFunc())
+	nablaB := nf.squareMatrix(zeroFunc())
+
 	for i := range nf.data.miniBatches {
 		//fmt.Println(idx, len(miniBatch))
 		fmt.Println(i)
 		for _, dataSet := range nf.data.miniBatches[i] {
 			x := dataSet[0]
 			y := dataSet[1]
-			nf.backProp(x, y)
+			nablaW, nablaB = nf.backProp(x, y, nablaW, nablaB)
 		}
-		nf.updateWeights(eta, lambda, n, miniBatchSize)
-		nf.updateBiases(eta, lambda, n, miniBatchSize)
+		nf.updateWeights()
+		nf.updateBiases()
 	}
 }
 
-func (nf *networkFormat) trainNetwork(epochs int, miniBatchSize int, lambda float64) {
+func (nf *networkFormat) trainNetwork(epochs int, miniBatchSize int, eta float64, lambda float64) {
 
 	nf.data.formatData()
+	nf.hyperParameters.setHyperParameters(eta, lambda)
 	nf.data.miniBatchGenerator(5)
 	nf.updateMiniBatch(1.0, 1.0, 10, miniBatchSize)
 }
@@ -130,16 +144,18 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(1, 5, 0.5)
+	nf.trainNetwork(1, 5, 0.5, 0.1)
 
 
 	//6000, 10, 2, 784 / 10
 	fmt.Println("")
 
 	start := time.Now()
-	nf.squareMatrix(zeroFunc())
+	nf.cubicMatrix(zeroFunc())
 	elapsed := time.Since(start)
 	log.Printf("Binomial took %s", elapsed)
+
+	fmt.Println(nf.data.miniBatchSize)
 
 
 }
