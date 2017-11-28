@@ -5,11 +5,12 @@ import (
 	"log"
 )
 
-type Data struct {
+type data struct {
 	trainingInput [][]float64
 	trainingOutput [][]float64
 	validationInput [][]float64
 	validationOutput [][]float64
+	miniBatches [][][][]float64
 }
 
 // customSliceToFloat64Slice converts the entries of the loaded
@@ -46,7 +47,7 @@ func labelToArray(label int) ([]float64) {
 // with data representing the pixel input (28*28). trainingOutput is a slice
 // containing equally many slices of length 10, with the value 1 at the
 // index corresponding to the input number (0-9).
-func (data *Data)initTrainingData (train *GoMNIST.Set) {
+func (data *data)initTrainingData (train *GoMNIST.Set) {
 	for i := 0; i < train.Count(); i++ {
 		inputSlice, outputNumber := train.Get(i)
 		data.trainingInput = append(data.trainingInput, customSliceToFloat64Slice(inputSlice))
@@ -59,7 +60,7 @@ func (data *Data)initTrainingData (train *GoMNIST.Set) {
 // with data representing the pixel input (28*28). validationOutput is a slice
 // containing equally many slices of length 10, with the value 1 at the
 // index corresponding to the input number (0-9).
-func (data *Data)initValidationData (test *GoMNIST.Set) {
+func (data *data)initValidationData (test *GoMNIST.Set) {
 	for i := 0; i < test.Count(); i++ {
 		inputSlice, outputNumber := test.Get(i)
 		data.validationInput = append(data.validationInput, customSliceToFloat64Slice(inputSlice))
@@ -68,7 +69,7 @@ func (data *Data)initValidationData (test *GoMNIST.Set) {
 }
 
 // formatData loads the MNIST data and initiates the Data struct.
-func (data *Data)formatData() {
+func (data *data)formatData() {
 	train, test, err := GoMNIST.Load("/home/guttorm/xal/go/src/github.com/petar/GoMNIST/data")
 	if err != nil {
 		log.Fatal(err)
@@ -76,4 +77,21 @@ func (data *Data)formatData() {
 	
 	data.initTrainingData(train)
 	data.initValidationData(test)
+}
+
+// miniBatchGenerator generates a new set of miniBatches from the training data.
+// miniBatches contain X (numberOfMiniBatches) number of mini batches, each of which contains Y (miniBatchSize) number
+// of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
+func (data *data) miniBatchGenerator(miniBatchSize int) {
+
+	trainingSetLength := len(data.trainingInput[:10])
+	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
+	miniBatch := make([][][]float64, miniBatchSize, miniBatchSize)
+
+	for i := 0; i < numberOfMiniBatches; i++ {
+		for j := 0; j < miniBatchSize; j++ {
+			miniBatch[j] = [][]float64{data.trainingInput[j], data.trainingOutput[j]}
+		}
+		data.miniBatches = append(data.miniBatches, miniBatch)
+	}
 }
