@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"time"
+	"log"
 )
 
 
@@ -35,7 +37,7 @@ func (nf *networkFormat) initNetwork() {
 // for input x and training output y (one batch in a mini batch)
 func (nf *networkFormat) backProp(x []float64, y []float64) {
 
-	fmt.Println(nf.nablaW[1][0])
+	fmt.Println(nf.nablaB[1])
 
 	var sum float64 = 0
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
@@ -103,6 +105,7 @@ func (nf *networkFormat) updateBiases(eta float64, lambda float64, n int, miniBa
 func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, miniBatchSize int) {
 	for i := range nf.data.miniBatches {
 		//fmt.Println(idx, len(miniBatch))
+		fmt.Println(i)
 		for _, dataSet := range nf.data.miniBatches[i] {
 			x := dataSet[0]
 			y := dataSet[1]
@@ -116,8 +119,8 @@ func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, min
 func (nf *networkFormat) trainNetwork(epochs int, miniBatchSize int, lambda float64) {
 
 	nf.data.formatData()
-	nf.data.miniBatchGenerator(10)
-	nf.updateMiniBatch(1.0, 1.0, 6000, miniBatchSize)
+	nf.data.miniBatchGenerator(5)
+	nf.updateMiniBatch(1.0, 1.0, 10, miniBatchSize)
 }
 
 func main() {
@@ -132,6 +135,11 @@ func main() {
 
 	//6000, 10, 2, 784 / 10
 	fmt.Println("")
+
+	start := time.Now()
+	nf.squareMatrix(zeroFunc())
+	elapsed := time.Since(start)
+	log.Printf("Binomial took %s", elapsed)
 
 
 }
