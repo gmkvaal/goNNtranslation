@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/petar/GoMNIST"
-	"log"
 )
 
 
@@ -45,7 +43,6 @@ func (nf *networkFormat) backProp(x []float64, y [10]float64) {
 	// Updating all neurons with the forwardFeed algorithm
 	for k := 0; k < l; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
-			fmt.Println("k", k, "i", j)
 			nf.z[k][j] = dot(nf.activations[k], nf.weights[k][j]) + nf.biases[k][j]
 			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
 		}
@@ -76,33 +73,28 @@ func (nf *networkFormat) backProp(x []float64, y [10]float64) {
 	}
 }
 
+func (nf *networkFormat) updateMiniBatch(miniBatch []float64, eta float64, lambda float64) {
+
+}
+
+func (nf *networkFormat) trainNetwork(epochs int, miniBatchSize int, lambda float64) {
+
+}
+
+
+
+
 func main() {
-
-	// Load files of type GoMNIST which is actually []byte, where the byte value
-	train, _, err := GoMNIST.Load("/home/guttorm/xal/go/src/github.com/petar/GoMNIST/data")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	sweeper := train.Sweep()
-	image, label, _ := sweeper.Next()
-
-	labelArr, err := labelToArray(int(label))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	y := labelArr
-	x := customSliceToFloat64Slice(image)
-
-	fmt.Println("")
 
 	nf := &networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
 
-	nf.backProp(x, y)
+	td := trainingData{}
+	td.formatData()
 
-	//fmt.Println(nablaW)
+	//nf.backProp(x, y)
 
-	fmt.Println(nf.nablaB)
+	fmt.Println(td.trainingOutput)
+
+
 }
