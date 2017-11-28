@@ -43,16 +43,17 @@ func (nf *networkFormat) backProp(x []float64, y [10]float64) {
 	nf.activations[0] = x
 
 	// Updating all neurons with the forwardFeed algorithm
-	for k := 0; k < len(nf.biases); k++ {
-		for i := range nf.weights[k] {
-			nf.z[k][i] = dot(nf.activations[k], nf.weights[k][i]) + nf.biases[k][i]
-			nf.activations[k+1][i] = sigmoid(nf.z[k][i])
+	for k := 0; k < l; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+			fmt.Println("k", k, "i", j)
+			nf.z[k][j] = dot(nf.activations[k], nf.weights[k][j]) + nf.biases[k][j]
+			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
 		}
 	}
 
 	// Computing the output error (delta L).
-	for i := range nf.activations[l] {
-		nf.delta[l-1][i] = outputNeuronError(nf.z[l-1][i], nf.activations[l][i], y[i])
+	for j := 0; j < nf.sizes[l]; j++ {
+		nf.delta[l-1][j] = outputNeuronError(nf.z[l-1][j], nf.activations[l][j], y[j])
 	}
 
 	// Gradients at the output layer
