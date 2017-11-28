@@ -34,7 +34,7 @@ func (nf *networkFormat) initNetwork() {
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (nf networkFormat) backProp(x []float64, y [10]float64) ([][]float64, [][][]float64) {
+func (nf *networkFormat) backProp(x []float64, y [10]float64) {
 
 	// Initiating the gradient matrices
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
@@ -72,10 +72,7 @@ func (nf networkFormat) backProp(x []float64, y [10]float64) ([][]float64, [][][
 				nf.nablaW[l-k][j][i] += nf.delta[l-k][j] * nf.activations[l-k][i]
 			}
 		}
-
 	}
-
-	return nf.nablaB, nf.nablaW
 }
 
 func main() {
@@ -101,7 +98,10 @@ func main() {
 
 	nf := &networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.nablaB, nf.nablaW = nf.backProp(x, y)
+
+	nf.backProp(x, y)
 
 	//fmt.Println(nablaW)
+
+	fmt.Println(nf.nablaB)
 }
