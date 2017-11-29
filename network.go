@@ -154,13 +154,13 @@ func (nf *networkFormat) updateMiniBatches() {
 	outputData := nf.data.miniBatches[1][9][1]
 	fmt.Println(nf.forwardFeedCopy(inputData), outputData)
 	fmt.Println(checkIfEqual(nf.forwardFeedCopy(inputData), outputData))
+}
 
-	var yes int
-	var no int
-	for i := range nf.data.trainingInput[:10000] {
-		inputData := nf.forwardFeedCopy(nf.data.validationInput[:10000][i])
-		outputData := nf.data.validationOutput[:10000][i]
-		if checkIfEqual(inputData, outputData) == 1 {
+
+func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData [][]float64) {
+	var yes, no int
+	for i := range outputData[:dataCap] {
+		if checkIfEqual(nf.forwardFeedCopy(inputData[:dataCap][i]), outputData[:dataCap][i]) == 1 {
 			yes += 1
 		} else {
 			no += 1
@@ -196,6 +196,10 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 	nf.data.miniBatchGenerator(dataCap, miniBatchSize)
 	nf.updateMiniBatches()
 
+	nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
+	nf.validate(60000, nf.data.trainingInput, nf.data.trainingOutput)
+
+
 }
 
 func main() {
@@ -205,7 +209,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(60000,10, 10, 0.5, 0.05)
+	nf.trainNetwork(60000,10, 10, 0.40, 0.025)
 
 
 	//6000, 10, 2, 784 / 10
