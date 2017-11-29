@@ -126,34 +126,19 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 	return nablaW, nablaB
 }
 
+// updateMiniBatches runs the stochastic gradient descent
+// algorithm for a set of mini batches
 func (nf *networkFormat) updateMiniBatches() {
 	nablaW := nf.cubicMatrix(zeroFunc())
 	nablaB := nf.squareMatrix(zeroFunc())
 
 	for i := range nf.data.miniBatches {
 		for _, dataSet := range nf.data.miniBatches[i] {
-			x := dataSet[0]
-			y := dataSet[1]
-			nablaW, nablaB = nf.backProp(x, y, nablaW, nablaB)
+			nablaW, nablaB = nf.backProp(dataSet[0], dataSet[1], nablaW, nablaB)
 		}
-		//fmt.Println("1", nf.biases[1][9])
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
-		//fmt.Println("2", nf.biases[1][9])
-
-
 	}
-
-	//fmt.Println(len(nf.data.miniBatches)) // total number of mini batches
-	//fmt.Println(len(nf.data.miniBatches[0])) // length of each mini batch
-	//fmt.Println(len(nf.data.miniBatches[0][0])) // 2 (input / output)
-	//fmt.Println(len(nf.data.miniBatches[0][0][1])) // 10 output neurons
-	//fmt.Println(len(nf.data.miniBatches[0][0][0])) // 784 input neurons
-
-	inputData := nf.data.miniBatches[1][9][0]
-	outputData := nf.data.miniBatches[1][9][1]
-	fmt.Println(nf.forwardFeedCopy(inputData), outputData)
-	fmt.Println(checkIfEqual(nf.forwardFeedCopy(inputData), outputData))
 }
 
 
@@ -193,11 +178,17 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 
 	nf.data.formatData()
 	nf.hyperParameters.setHyperParameters(eta, lambda)
-	nf.data.miniBatchGenerator(dataCap, miniBatchSize)
+	nf.data.miniBatchGenerator(0, dataCap, miniBatchSize)
 	nf.updateMiniBatches()
 
 	nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
-	nf.validate(60000, nf.data.trainingInput, nf.data.trainingOutput)
+	nf.validate(6000, nf.data.trainingInput, nf.data.trainingOutput)
+
+	nf.data.miniBatchGenerator(0, dataCap, miniBatchSize)
+	nf.updateMiniBatches()
+
+	nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
+	nf.validate(6000, nf.data.trainingInput, nf.data.trainingOutput)
 
 
 }
@@ -209,7 +200,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(60000,10, 10, 0.40, 0.025)
+	nf.trainNetwork(6000,10, 10, 0.355, 2.45)
 
 
 	//6000, 10, 2, 784 / 10
