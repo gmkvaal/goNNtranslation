@@ -200,7 +200,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(6000,10, 10, 0.355, 2.45)
+	nf.trainNetwork(6000,5, 10, 0.04, 20/10)
 
 
 	//6000, 10, 2, 784 / 10

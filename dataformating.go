@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/petar/GoMNIST"
 	"log"
-	"fmt"
 )
 
 type data struct {
@@ -101,9 +100,10 @@ func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int) {
 	// THE SAME 10 training input/output are put in each mini batch
 
 	for i := 0; i < numberOfMiniBatches; i++ {
+		//fmt.Println(i)
 		for j := 0; j < miniBatchSize; j++ {
 			//fmt.Println(len(data.trainingInput), len(data.trainingOutput), len(miniBatch))
-			miniBatch[j] = [][]float64{data.trainingInput[j], data.trainingOutput[j]}
+			miniBatch[j] = [][]float64{data.trainingInput[i*miniBatchSize + j], data.trainingOutput[i*miniBatchSize + j]}
 		}
 		data.miniBatches = append(data.miniBatches, miniBatch)
 	}
