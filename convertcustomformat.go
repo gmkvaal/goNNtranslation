@@ -91,7 +91,7 @@ func (data *data)formatData() {
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
 func (data *data) miniBatchGenerator(miniBatchSize int) {
 
-	trainingSetLength := len(data.trainingInput[:10])
+	trainingSetLength := len(data.trainingInput[:20])
 	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
 	miniBatch := make([][][]float64, miniBatchSize, miniBatchSize)
 

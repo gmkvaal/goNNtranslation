@@ -25,21 +25,22 @@ type hyperParameters struct {
 	lambda float64
 }
 
-func (hp *hyperParameters) setHyperParameters (eta float64, lambda float64) {
-	hp.eta = eta
-	hp.lambda = lambda
-}
-
 // initNetwork initiates the weights
 // and biases with random numbers
 func (nf *networkFormat) initNetwork() {
-	nf.weights = nf.cubicMatrix(zeroFunc())
+	nf.weights = nf.cubicMatrix(randomFunc())
 	nf.biases = nf.squareMatrix(randomFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
 	//nf.nablaW = nf.cubicMatrix(zeroFunc())
 	//nf.nablaB = nf.squareMatrix(zeroFunc())
 	nf.z = nf.squareMatrix(zeroFunc())
 	nf.activations = nf.squareMatrixFull(zeroFunc())
+}
+
+// setHyperParameters initiates the hyper parameters
+func (hp *hyperParameters) setHyperParameters (eta float64, lambda float64) {
+	hp.eta = eta
+	hp.lambda = lambda
 }
 
 // backProp performs one iteration of the backpropagation algorithm
@@ -51,15 +52,7 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 	// Clearing / preparing the slices
 	nf.activations[0] = x
 
-	/*
-	// Updating all neurons with the forwardFeed algorithm
-	for k := 0; k < l; k++ {
-		for j := 0; j < nf.sizes[k+1]; j++ {
-			nf.z[k][j] = dot(nf.activations[k], nf.weights[k][j]) + nf.biases[k][j]
-			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
-		}
-	}
-	*/
+	// Forward feed
 	for k := 0; k < l; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			for i := 0; i < nf.sizes[k]; i++ {
@@ -68,9 +61,12 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 			nf.activations[k+1][j] = sigmoid(nf.z[k][j] + nf.biases[k][j])
 		}
 	}
-	fmt.Println("2", nf.activations[1])
-	fmt.Println("")
-	fmt.Println("3", nf.activations[2])
+
+	//fmt.Println("")
+	//fmt.Println("2", nf.activations[1])
+	//fmt.Println("")
+	//fmt.Println("3", nf.activations[2])
+	//fmt.Println(y)
 
 
 	//fmt.Println("weights", nf.weights[1][9])
@@ -131,7 +127,6 @@ func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, min
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
 		//fmt.Println("2", nf.biases[1][9])
-		fmt.Println("")
 	}
 }
 
