@@ -157,9 +157,9 @@ func (nf *networkFormat) updateMiniBatches() {
 
 	var yes int
 	var no int
-	for i := range nf.data.trainingInput[:60000] {
-		inputData := nf.forwardFeedCopy(nf.data.trainingInput[:60000][i])
-		outputData := nf.data.trainingOutput[:60000][i]
+	for i := range nf.data.trainingInput[:10000] {
+		inputData := nf.forwardFeedCopy(nf.data.validationInput[:10000][i])
+		outputData := nf.data.validationOutput[:10000][i]
 		if checkIfEqual(inputData, outputData) == 1 {
 			yes += 1
 		} else {
