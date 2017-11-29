@@ -33,7 +33,7 @@ func (hp *hyperParameters) setHyperParameters (eta float64, lambda float64) {
 // initNetwork initiates the weights
 // and biases with random numbers
 func (nf *networkFormat) initNetwork() {
-	nf.weights = nf.cubicMatrix(randomFunc())
+	nf.weights = nf.cubicMatrix(zeroFunc())
 	nf.biases = nf.squareMatrix(randomFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
 	//nf.nablaW = nf.cubicMatrix(zeroFunc())
@@ -51,6 +51,7 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 	// Clearing / preparing the slices
 	nf.activations[0] = x
 
+	/*
 	// Updating all neurons with the forwardFeed algorithm
 	for k := 0; k < l; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
@@ -58,11 +59,27 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
 		}
 	}
-
-	fmt.Println("weights", nf.weights[1][9])
-	fmt.Println("sum", sumsum(nf.weights[1][9]))
+	*/
+	for k := 0; k < l; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+			for i := 0; i < nf.sizes[k]; i++ {
+				nf.z[k][j] += nf.activations[k][i] * nf.weights[k][j][i]
+			}
+			nf.activations[k+1][j] = sigmoid(nf.z[k][j] + nf.biases[k][j])
+		}
+	}
+	fmt.Println("2", nf.activations[1])
 	fmt.Println("")
-	fmt.Println("z", nf.z[1])
+	fmt.Println("3", nf.activations[2])
+
+
+	//fmt.Println("weights", nf.weights[1][9])
+	//fmt.Println("biases", nf.biases[1])
+	//fmt.Println("sumW", sumsum(nf.weights[1][9]), "sumB", sumsum(nf.biases[1]))
+	//fmt.Println("")
+	//fmt.Println("z", nf.z[1])
+	//fmt.Println("sig", nf.activations[1])
+
 
 	// Computing the output error (delta L).
 	for j := 0; j < nf.sizes[l]; j++ {
@@ -154,7 +171,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(1, 1, 1e13, 0.1)
+	nf.trainNetwork(10, 5, 0.5, 0.1)
 
 
 	//6000, 10, 2, 784 / 10
