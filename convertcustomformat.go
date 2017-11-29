@@ -11,6 +11,8 @@ type data struct {
 	validationInput [][]float64
 	validationOutput [][]float64
 	miniBatches [][][][]float64
+	n int
+	miniBatchSize int
 }
 
 // customSliceToFloat64Slice converts the entries of the loaded
@@ -47,7 +49,7 @@ func labelToArray(label int) ([]float64) {
 // with data representing the pixel input (28*28). trainingOutput is a slice
 // containing equally many slices of length 10, with the value 1 at the
 // index corresponding to the input number (0-9).
-func (data *data)initTrainingData (train *GoMNIST.Set) {
+func (data *data) initTrainingData(train *GoMNIST.Set) {
 	for i := 0; i < train.Count(); i++ {
 		inputSlice, outputNumber := train.Get(i)
 		data.trainingInput = append(data.trainingInput, customSliceToFloat64Slice(inputSlice))
@@ -60,12 +62,17 @@ func (data *data)initTrainingData (train *GoMNIST.Set) {
 // with data representing the pixel input (28*28). validationOutput is a slice
 // containing equally many slices of length 10, with the value 1 at the
 // index corresponding to the input number (0-9).
-func (data *data)initValidationData (test *GoMNIST.Set) {
+func (data *data) initValidationData(test *GoMNIST.Set) {
 	for i := 0; i < test.Count(); i++ {
 		inputSlice, outputNumber := test.Get(i)
 		data.validationInput = append(data.validationInput, customSliceToFloat64Slice(inputSlice))
 		data.validationOutput = append(data.validationOutput, labelToArray(int(outputNumber)))
 	}
+}
+
+func (data *data) initSizes(trainingSetLength int, miniBatchSize int) {
+	data.n = trainingSetLength
+	data.miniBatchSize = miniBatchSize
 }
 
 // formatData loads the MNIST data and initiates the Data struct.
@@ -84,9 +91,11 @@ func (data *data)formatData() {
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
 func (data *data) miniBatchGenerator(miniBatchSize int) {
 
-	trainingSetLength := len(data.trainingInput[:10])
+	trainingSetLength := len(data.trainingInput[:20])
 	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
 	miniBatch := make([][][]float64, miniBatchSize, miniBatchSize)
+
+	data.initSizes(trainingSetLength, miniBatchSize)
 
 	for i := 0; i < numberOfMiniBatches; i++ {
 		for j := 0; j < miniBatchSize; j++ {
