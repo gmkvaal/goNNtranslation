@@ -38,9 +38,27 @@ func (nf *networkFormat) initNetwork() {
 }
 
 // setHyperParameters initiates the hyper parameters
-func (hp *hyperParameters) setHyperParameters (eta float64, lambda float64) {
+func (hp *hyperParameters) setHyperParameters(eta float64, lambda float64) {
 	hp.eta = eta
 	hp.lambda = lambda
+}
+
+func (nf networkFormat) forwardFeedCopy(activations [][]float64, z[][]float64, x []float64) []float64 {
+	// Clearing / preparing the slices
+	l := len(nf.sizes) - 1 // last entry "layer-vise"
+	activations[0] = x
+
+	// Forward feed
+	for k := 0; k < l; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+			for i := 0; i < nf.sizes[k]; i++ {
+				z[k][j] += activations[k][i] * nf.weights[k][j][i]
+			}
+			activations[k+1][j] = sigmoid(z[k][j] + nf.biases[k][j])
+		}
+	}
+
+	return activations[2]
 }
 
 // backProp performs one iteration of the backpropagation algorithm
