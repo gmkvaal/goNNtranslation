@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
-	"log"
 )
 
 
@@ -14,8 +12,8 @@ type networkFormat struct {
 	biases      [][]float64
 	weights     [][][]float64
 	delta       [][]float64
-	nablaW      [][][]float64
-	nablaB      [][]float64
+	//nablaW      [][][]float64
+	//nablaB      [][]float64
 	z           [][]float64
 	activations [][]float64
 	data
@@ -38,8 +36,8 @@ func (nf *networkFormat) initNetwork() {
 	nf.weights = nf.cubicMatrix(randomFunc())
 	nf.biases = nf.squareMatrix(randomFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
-	nf.nablaW = nf.cubicMatrix(zeroFunc())
-	nf.nablaB = nf.squareMatrix(zeroFunc())
+	//nf.nablaW = nf.cubicMatrix(zeroFunc())
+	//nf.nablaB = nf.squareMatrix(zeroFunc())
 	nf.z = nf.squareMatrix(zeroFunc())
 	nf.activations = nf.squareMatrixFull(zeroFunc())
 }
@@ -60,6 +58,11 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
 		}
 	}
+
+	fmt.Println("weights", nf.weights[1][9])
+	fmt.Println("sum", sumsum(nf.weights[1][9]))
+	fmt.Println("")
+	fmt.Println("z", nf.z[1])
 
 	// Computing the output error (delta L).
 	for j := 0; j < nf.sizes[l]; j++ {
@@ -89,27 +92,12 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 	return nablaW, nablaB
 }
 
-func (nf *networkFormat) updateWeights() {
-	for k := 0; k < len(nf.sizes) - 2; k++ {
-		for j := 0; j < nf.sizes[k+1]; j++ {
-			for i := 0; i < nf.sizes[k]; i++ {
-				//fmt.Println("k", k, "j", j, "i", i)
-				//fmt.Println(len(nf.weights[k][j]))
-				nf.weights[k][j][i] = (1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))*nf.weights[k][j][i] -
-					nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nf.nablaW[k][j][i]
-				nf.nablaW[k][j][i] = 0.0 // clearing for next batch
-			}
-		}
+func sumsum(a []float64) float64 {
+	b := 0.0
+	for _, val := range a {
+		b += val
 	}
-}
-
-func (nf *networkFormat) updateBiases() {
-	for k := 0; k < len(nf.sizes) - 2; k++ {
-		for j := 0; j < nf.sizes[k+1]; j++ {
-			nf.biases[k][j] = nf.biases[k][j] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nf.nablaB[k][j]
-			nf.nablaB[k][j] = 0
-		}
-	}
+	return b
 }
 
 func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, miniBatchSize int) {
@@ -117,23 +105,45 @@ func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, min
 	nablaB := nf.squareMatrix(zeroFunc())
 
 	for i := range nf.data.miniBatches {
-		//fmt.Println(idx, len(miniBatch))
-		fmt.Println(i)
 		for _, dataSet := range nf.data.miniBatches[i] {
 			x := dataSet[0]
 			y := dataSet[1]
 			nablaW, nablaB = nf.backProp(x, y, nablaW, nablaB)
 		}
-		nf.updateWeights()
-		nf.updateBiases()
+		//fmt.Println("1", nf.biases[1][9])
+		nf.updateWeights(nablaW)
+		nf.updateBiases(nablaB)
+		//fmt.Println("2", nf.biases[1][9])
+		fmt.Println("")
 	}
+}
+
+func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
+	for k := 0; k < len(nf.sizes) - 1; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+			for i := 0; i < nf.sizes[k]; i++ {
+				nf.weights[k][j][i] = (1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))*
+					nf.weights[k][j][i] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaW[k][j][i]
+			}
+		}
+	}
+}
+
+func (nf *networkFormat) updateBiases(nablaB [][]float64) {
+	for k := 0; k < len(nf.sizes) - 1; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+			nf.biases[k][j] = nf.biases[k][j] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaB[k][j]
+		}
+	}
+	//fmt.Println(nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaB[1][9])
+
 }
 
 func (nf *networkFormat) trainNetwork(epochs int, miniBatchSize int, eta float64, lambda float64) {
 
 	nf.data.formatData()
 	nf.hyperParameters.setHyperParameters(eta, lambda)
-	nf.data.miniBatchGenerator(5)
+	nf.data.miniBatchGenerator(miniBatchSize)
 	nf.updateMiniBatch(1.0, 1.0, 10, miniBatchSize)
 }
 
@@ -144,18 +154,19 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(1, 5, 0.5, 0.1)
+	nf.trainNetwork(1, 1, 1e13, 0.1)
 
 
 	//6000, 10, 2, 784 / 10
 	fmt.Println("")
 
-	start := time.Now()
-	nf.cubicMatrix(zeroFunc())
-	elapsed := time.Since(start)
-	log.Printf("Binomial took %s", elapsed)
+	//start := time.Now()
 
-	fmt.Println(nf.data.miniBatchSize)
+	//nf.cubicMatrix(zeroFunc())
+	//elapsed := time.Since(start)
+	//log.Printf("Binomial took %s", elapsed)
+
+	//fmt.Println(nf.data.miniBatchSize)
 
 
 }
