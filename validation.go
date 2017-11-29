@@ -23,7 +23,7 @@ func argMax (s []float64) int {
 
 // validate checks if the output from the network matches
 // the the validation output. Returns 1 if true, 0 if false
-func validate(yNetwork []float64, y []float64) int {
+func checkIfEqual(yNetwork []float64, y []float64) int {
 
 	if argMax(yNetwork) == argMax(y) {
 		return 1

@@ -43,9 +43,12 @@ func (hp *hyperParameters) setHyperParameters(eta float64, lambda float64) {
 	hp.lambda = lambda
 }
 
-func (nf networkFormat) forwardFeedCopy(activations [][]float64, z[][]float64, x []float64) []float64 {
+func (nf networkFormat) forwardFeedCopy(x []float64) []float64 {
 	// Clearing / preparing the slices
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
+
+	z := nf.squareMatrix(zeroFunc())
+	activations := nf.squareMatrixFull(zeroFunc())
 	activations[0] = x
 
 	// Forward feed
@@ -123,15 +126,7 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 	return nablaW, nablaB
 }
 
-func sumsum(a []float64) float64 {
-	b := 0.0
-	for _, val := range a {
-		b += val
-	}
-	return b
-}
-
-func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, miniBatchSize int) {
+func (nf *networkFormat) updateMiniBatches() {
 	nablaW := nf.cubicMatrix(zeroFunc())
 	nablaB := nf.squareMatrix(zeroFunc())
 
@@ -145,7 +140,34 @@ func (nf *networkFormat) updateMiniBatch(eta float64, lambda float64, n int, min
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
 		//fmt.Println("2", nf.biases[1][9])
+
+
 	}
+
+	//fmt.Println(len(nf.data.miniBatches)) // total number of mini batches
+	//fmt.Println(len(nf.data.miniBatches[0])) // length of each mini batch
+	//fmt.Println(len(nf.data.miniBatches[0][0])) // 2 (input / output)
+	//fmt.Println(len(nf.data.miniBatches[0][0][1])) // 10 output neurons
+	//fmt.Println(len(nf.data.miniBatches[0][0][0])) // 784 input neurons
+
+	inputData := nf.data.miniBatches[1][9][0]
+	outputData := nf.data.miniBatches[1][9][1]
+	fmt.Println(nf.forwardFeedCopy(inputData), outputData)
+	fmt.Println(checkIfEqual(nf.forwardFeedCopy(inputData), outputData))
+
+	var yes int
+	var no int
+	for i := range nf.data.trainingInput[:60000] {
+		inputData := nf.forwardFeedCopy(nf.data.trainingInput[:60000][i])
+		outputData := nf.data.trainingOutput[:60000][i]
+		if checkIfEqual(inputData, outputData) == 1 {
+			yes += 1
+		} else {
+			no += 1
+		}
+	}
+
+	fmt.Println(yes, no, float64(yes)/float64(no))
 }
 
 func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
@@ -165,16 +187,15 @@ func (nf *networkFormat) updateBiases(nablaB [][]float64) {
 			nf.biases[k][j] = nf.biases[k][j] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaB[k][j]
 		}
 	}
-	//fmt.Println(nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaB[1][9])
-
 }
 
-func (nf *networkFormat) trainNetwork(epochs int, miniBatchSize int, eta float64, lambda float64) {
+func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int, eta float64, lambda float64) {
 
 	nf.data.formatData()
 	nf.hyperParameters.setHyperParameters(eta, lambda)
-	nf.data.miniBatchGenerator(miniBatchSize)
-	nf.updateMiniBatch(1.0, 1.0, 10, miniBatchSize)
+	nf.data.miniBatchGenerator(dataCap, miniBatchSize)
+	nf.updateMiniBatches()
+
 }
 
 func main() {
@@ -184,7 +205,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(10, 5, 0.5, 0.1)
+	nf.trainNetwork(60000,10, 10, 0.5, 0.05)
 
 
 	//6000, 10, 2, 784 / 10
