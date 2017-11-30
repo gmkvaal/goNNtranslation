@@ -105,7 +105,6 @@ func (data *data) shuffleValidationData() {
 	}
 }
 
-
 func (data *data) shuffleAllData() {
 	rand.Seed(time.Now().UnixNano())
 	data.shuffleTrainingData()
@@ -138,5 +137,9 @@ func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int, shuf
 		}
 		data.miniBatches = append(data.miniBatches, miniBatch)
 	}
+
+	//for i := 0; i < dataCap; i++ {
+	//	fmt.Println(data.miniBatches[1][i][1])
+	//}
 }
 

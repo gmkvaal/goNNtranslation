@@ -37,6 +37,9 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData [][]float64) {
 	var yes, no int
 	for i := range outputData[:dataCap] {
+		//fmt.Println(nf.forwardFeedValidation(inputData[:dataCap][i]))
+		//fmt.Println(outputData[:dataCap][i])
+		//fmt.Println()
 		if checkIfEqual(nf.forwardFeedValidation(inputData[:dataCap][i]), outputData[:dataCap][i]) == 1 {
 			yes += 1
 		} else {

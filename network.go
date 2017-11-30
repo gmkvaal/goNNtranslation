@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // networkFormat contains the
 // fields sizes, biases, and weights
@@ -43,9 +45,8 @@ func (hp *hyperParameters) setHyperParameters(eta float64, lambda float64) {
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
-								  nablaB[][]float64) ([][][]float64, [][]float64){
-	var sum float64 = 0
+func (nf *networkFormat) backProp(x, y []float64, nablaW[][][]float64, nablaB[][]float64) ([][][]float64, [][]float64){
+
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
 	// The first row of activations is the input
@@ -73,11 +74,10 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 	// Backpropagating the error
 	for k := 2; k < l+1; k++ {
 		for j := 0; j < nf.sizes[l+1-k]; j++ {
-			sum = 0
+			nf.delta[l-k][j] = 0
 			for i := 0; i < nf.sizes[l+2-k]; i++ {
-				sum += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l+1-k][i])
+				nf.delta[l-k][j] += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l+1-k][i])
 			}
-			nf.delta[l-k][j] = sum
 			nablaB[l-k][j] +=  nf.delta[l-k][j]
 
 			for i := 0; i < nf.sizes[l-k]; i++ {
@@ -86,11 +86,19 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 		}
 	}
 
+	//sum := 0.0
+	//for i := 0; i < len(x); i++ {
+	//	sum += x[i]
+	//}
+	//fmt.Println(nf.activations[2])
+	//fmt.Println(y)
+	//fmt.Println()
+
 	return nablaW, nablaB
 }
 
 // updateMiniBatches runs the stochastic gradient descent
-// algorithm for a set of mini batches
+// algorithm for a set of mini batches (e.g one epoch)
 func (nf *networkFormat) updateMiniBatches() {
 
 	nablaW := nf.cubicMatrix(zeroFunc())
@@ -98,8 +106,10 @@ func (nf *networkFormat) updateMiniBatches() {
 
 	for i := range nf.data.miniBatches {
 		for _, dataSet := range nf.data.miniBatches[i] {
+			//fmt.Println(dataSet[1])
 			nablaW, nablaB = nf.backProp(dataSet[0], dataSet[1], nablaW, nablaB)
 		}
+
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
 	}
@@ -119,7 +129,6 @@ func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
 
 // updateBiases updates the bias matrix following a mini batch
 func (nf *networkFormat) updateBiases(nablaB [][]float64) {
-
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			nf.biases[k][j] = nf.biases[k][j] - nf.hp.eta/nf.data.miniBatchSize*nablaB[k][j]
@@ -146,7 +155,7 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,5, 10, 1.0, 20.0, true)
+	nf.trainNetwork(1000,10, 10, 1000, 0.1, true)
 
 
 }
