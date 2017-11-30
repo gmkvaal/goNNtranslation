@@ -3,6 +3,9 @@ package main
 import (
 	"github.com/petar/GoMNIST"
 	"log"
+	"math/rand"
+	"time"
+	"fmt"
 )
 
 type data struct {
@@ -70,13 +73,14 @@ func (data *data) initValidationData(test *GoMNIST.Set) {
 	}
 }
 
+// initSizes initiates the fields containing the size and length of the training set and mini batch
 func (data *data) initSizes(trainingSetLength int, miniBatchSize int) {
 	data.n = trainingSetLength
 	data.miniBatchSize = miniBatchSize
 }
 
 // formatData loads the MNIST data and initiates the Data struct.
-func (data *data)formatData() {
+func (data *data) formatData() {
 	train, test, err := GoMNIST.Load("/home/guttorm/xal/go/src/github.com/petar/GoMNIST/data")
 	if err != nil {
 		log.Fatal(err)
@@ -86,10 +90,28 @@ func (data *data)formatData() {
 	data.initValidationData(test)
 }
 
+func (data *data) shuffleData(dataSlice [][]float64) {
+	for i := len(dataSlice) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		dataSlice[i], dataSlice[j] = dataSlice[j], dataSlice[i]
+	}
+}
+
+func (data *data) shuffleAllData() {
+	fmt.Println(time.Now().UnixNano())
+	rand.Seed(time.Now().UnixNano())
+	//data.shuffleData(data.trainingInput)
+	//data.shuffleData(data.trainingOutput)
+	//data.shuffleData(data.validationInput)
+	//data.shuffleData(data.validationOutput)
+}
+
 // miniBatchGenerator generates a new set of miniBatches from the training data.
-// miniBatches contain X (numberOfMiniBatches) number of mini batches, each of which contains Y (miniBatchSize) number
+// miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
 func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int) {
+
+	data.shuffleAllData()
 
 	trainingSetLength := len(data.trainingInput[dataStart:dataCap])
 	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
@@ -100,10 +122,9 @@ func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int) {
 	// THE SAME 10 training input/output are put in each mini batch
 
 	for i := 0; i < numberOfMiniBatches; i++ {
-		//fmt.Println(i)
 		for j := 0; j < miniBatchSize; j++ {
-			//fmt.Println(len(data.trainingInput), len(data.trainingOutput), len(miniBatch))
-			miniBatch[j] = [][]float64{data.trainingInput[i*miniBatchSize + j], data.trainingOutput[i*miniBatchSize + j]}
+			miniBatch[j] = [][]float64{data.trainingInput[i*miniBatchSize + j],
+									   data.trainingOutput[i*miniBatchSize + j]}
 		}
 		data.miniBatches = append(data.miniBatches, miniBatch)
 	}

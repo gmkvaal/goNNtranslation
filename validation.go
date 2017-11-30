@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // argMax returns the index corresponding
 // to the largest entry in slice s
 func argMax (s []float64) int {
@@ -30,4 +32,17 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	} else {
 		return 0
 	}
+}
+
+func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData [][]float64) {
+	var yes, no int
+	for i := range outputData[:dataCap] {
+		if checkIfEqual(nf.forwardFeedValidation(inputData[:dataCap][i]), outputData[:dataCap][i]) == 1 {
+			yes += 1
+		} else {
+			no += 1
+		}
+	}
+
+	fmt.Println(yes, no, float64(yes)/float64(no))
 }

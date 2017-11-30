@@ -1,9 +1,6 @@
 package main
 
-import (
-	"fmt"
-)
-
+import "fmt"
 
 // networkFormat contains the
 // fields sizes, biases, and weights
@@ -43,7 +40,7 @@ func (hp *hyperParameters) setHyperParameters(eta float64, lambda float64) {
 	hp.lambda = lambda
 }
 
-func (nf networkFormat) forwardFeedCopy(x []float64) []float64 {
+func (nf networkFormat) forwardFeedValidation(x []float64) []float64 {
 	// Clearing / preparing the slices
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
@@ -66,11 +63,12 @@ func (nf networkFormat) forwardFeedCopy(x []float64) []float64 {
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64, nablaB[][]float64) ([][][]float64, [][]float64){
+func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
+								  nablaB[][]float64) ([][][]float64, [][]float64){
 	var sum float64 = 0
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
-	// Clearing / preparing the slices
+	// The first row of activations is the input
 	nf.activations[0] = x
 
 	// Forward feed
@@ -82,21 +80,6 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 			nf.activations[k+1][j] = sigmoid(nf.z[k][j] + nf.biases[k][j])
 		}
 	}
-
-	//fmt.Println("")
-	//fmt.Println("2", nf.activations[1])
-	//fmt.Println("")
-	//fmt.Println("3", nf.activations[2])
-	//fmt.Println(y)
-
-
-	//fmt.Println("weights", nf.weights[1][9])
-	//fmt.Println("biases", nf.biases[1])
-	//fmt.Println("sumW", sumsum(nf.weights[1][9]), "sumB", sumsum(nf.biases[1]))
-	//fmt.Println("")
-	//fmt.Println("z", nf.z[1])
-	//fmt.Println("sig", nf.activations[1])
-
 
 	// Computing the output error (delta L).
 	for j := 0; j < nf.sizes[l]; j++ {
@@ -142,19 +125,7 @@ func (nf *networkFormat) updateMiniBatches() {
 }
 
 
-func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData [][]float64) {
-	var yes, no int
-	for i := range outputData[:dataCap] {
-		if checkIfEqual(nf.forwardFeedCopy(inputData[:dataCap][i]), outputData[:dataCap][i]) == 1 {
-			yes += 1
-		} else {
-			no += 1
-		}
-	}
-
-	fmt.Println(yes, no, float64(yes)/float64(no))
-}
-
+// updateWeights updates the weight matrix following a mini batch
 func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
@@ -166,6 +137,7 @@ func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
 	}
 }
 
+// updateBiases updates the bias matrix following a mini batch
 func (nf *networkFormat) updateBiases(nablaB [][]float64) {
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
@@ -200,7 +172,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(6000,5, 10, 0.04, 20/10)
+	nf.trainNetwork(6000,5, 5, 0.04, 20/10)
 
 
 	//6000, 10, 2, 784 / 10
