@@ -150,18 +150,16 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 
 	nf.data.formatData()
 	nf.hyperParameters.setHyperParameters(eta, lambda)
-	nf.data.miniBatchGenerator(0, dataCap, miniBatchSize)
-	nf.updateMiniBatches()
 
-	nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
-	nf.validate(6000, nf.data.trainingInput, nf.data.trainingOutput)
+	for i := 0; i < epochs; i++ {
 
-	nf.data.miniBatchGenerator(0, dataCap, miniBatchSize)
-	nf.updateMiniBatches()
+		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize)
+		nf.updateMiniBatches()
 
-	nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
-	nf.validate(6000, nf.data.trainingInput, nf.data.trainingOutput)
+		nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
+		nf.validate(6000, nf.data.trainingInput, nf.data.trainingOutput)
 
+	}
 
 }
 
@@ -172,7 +170,7 @@ func main() {
 
 	//nf.backProp(x, y)
 
-	nf.trainNetwork(6000,5, 5, 0.04, 20/10)
+	nf.trainNetwork(1000,3, 10, 0.5, 2.5)
 
 
 	//6000, 10, 2, 784 / 10

@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"time"
-	"fmt"
 )
 
 type data struct {
@@ -90,20 +89,27 @@ func (data *data) formatData() {
 	data.initValidationData(test)
 }
 
-func (data *data) shuffleData(dataSlice [][]float64) {
-	for i := len(dataSlice) - 1; i > 0; i-- {
+func (data *data) shuffleTrainingData() {
+	for i := len(data.trainingInput) - 1; i > 0; i-- {
 		j := rand.Intn(i + 1)
-		dataSlice[i], dataSlice[j] = dataSlice[j], dataSlice[i]
+		data.trainingInput[i], data.trainingInput[j] = data.trainingInput[j], data.trainingInput[i]
+		data.trainingOutput[i], data.trainingOutput[j] = data.trainingOutput[j], data.trainingOutput[i]
 	}
 }
 
+func (data *data) shuffleValidationData() {
+	for i := len(data.validationInput) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		data.validationInput[i], data.validationInput[j] = data.validationInput[j], data.validationInput[i]
+		data.validationOutput[i], data.validationOutput[j] = data.validationOutput[j], data.validationOutput[i]
+	}
+}
+
+
 func (data *data) shuffleAllData() {
-	fmt.Println(time.Now().UnixNano())
 	rand.Seed(time.Now().UnixNano())
-	//data.shuffleData(data.trainingInput)
-	//data.shuffleData(data.trainingOutput)
-	//data.shuffleData(data.validationInput)
-	//data.shuffleData(data.validationOutput)
+	data.shuffleTrainingData()
+	data.shuffleValidationData()
 }
 
 // miniBatchGenerator generates a new set of miniBatches from the training data.
