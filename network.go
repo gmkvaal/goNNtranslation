@@ -14,7 +14,7 @@ type networkFormat struct {
 	z           [][]float64
 	activations [][]float64
 	data
-	hyperParameters
+	hp hyperParameters
 }
 
 type hyperParameters struct {
@@ -110,9 +110,8 @@ func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			for i := 0; i < nf.sizes[k]; i++ {
-				//fmt.Println(1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))
-				nf.weights[k][j][i] = (1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))*
-					nf.weights[k][j][i] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaW[k][j][i]
+				nf.weights[k][j][i] = (1 - nf.hp.eta*(nf.hp.lambda/nf.data.n))*nf.weights[k][j][i] -
+					nf.hp.eta/nf.data.miniBatchSize * nablaW[k][j][i]
 			}
 		}
 	}
@@ -123,14 +122,15 @@ func (nf *networkFormat) updateBiases(nablaB [][]float64) {
 
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
-			nf.biases[k][j] = nf.biases[k][j] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaB[k][j]
+			nf.biases[k][j] = nf.biases[k][j] - nf.hp.eta/nf.data.miniBatchSize*nablaB[k][j]
 		}
 	}
 }
 
+// trainNetwork trains the network with the parameters given as arguments
 func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
 	nf.data.formatData()
-	nf.hyperParameters.setHyperParameters(eta, lambda)
+	nf.hp.setHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {
 		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
@@ -146,7 +146,7 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,5, 10, 0.1, 1000.0, true)
+	nf.trainNetwork(1000,5, 10, 1.0, 20.0, true)
 
 
 }

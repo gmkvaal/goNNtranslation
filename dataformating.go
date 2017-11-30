@@ -13,8 +13,8 @@ type data struct {
 	validationInput [][]float64
 	validationOutput [][]float64
 	miniBatches [][][][]float64
-	n int
-	miniBatchSize int
+	n float64
+	miniBatchSize float64
 }
 
 // customSliceToFloat64Slice converts the entries of the loaded
@@ -74,8 +74,8 @@ func (data *data) initValidationData(test *GoMNIST.Set) {
 
 // initSizes initiates the fields containing the size and length of the training set and mini batch
 func (data *data) initSizes(trainingSetLength int, miniBatchSize int) {
-	data.n = trainingSetLength
-	data.miniBatchSize = miniBatchSize
+	data.n = float64(trainingSetLength)
+	data.miniBatchSize = float64(miniBatchSize)
 }
 
 // formatData loads the MNIST data and initiates the Data struct.
