@@ -115,9 +115,13 @@ func (data *data) shuffleAllData() {
 // miniBatchGenerator generates a new set of miniBatches from the training data.
 // miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
-func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int) {
+func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int, shuffle bool) {
 
-	data.shuffleAllData()
+	dataStart = 0 // not yet implemented
+
+	if shuffle {
+		data.shuffleAllData()
+	}
 
 	trainingSetLength := len(data.trainingInput[dataStart:dataCap])
 	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)

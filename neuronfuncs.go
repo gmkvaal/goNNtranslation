@@ -14,5 +14,5 @@ func sigmoidPrime(z float64) float64 {
 
 // delta returns the error at a given neuron
 func outputNeuronError(z float64, a float64, y float64) float64 {
-	return (a - y) * sigmoidPrime(z)
+	return a - y //* sigmoidPrime(z)
 }

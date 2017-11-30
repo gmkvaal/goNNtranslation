@@ -40,26 +40,6 @@ func (hp *hyperParameters) setHyperParameters(eta float64, lambda float64) {
 	hp.lambda = lambda
 }
 
-func (nf networkFormat) forwardFeedValidation(x []float64) []float64 {
-	// Clearing / preparing the slices
-	l := len(nf.sizes) - 1 // last entry "layer-vise"
-
-	z := nf.squareMatrix(zeroFunc())
-	activations := nf.squareMatrixFull(zeroFunc())
-	activations[0] = x
-
-	// Forward feed
-	for k := 0; k < l; k++ {
-		for j := 0; j < nf.sizes[k+1]; j++ {
-			for i := 0; i < nf.sizes[k]; i++ {
-				z[k][j] += activations[k][i] * nf.weights[k][j][i]
-			}
-			activations[k+1][j] = sigmoid(z[k][j] + nf.biases[k][j])
-		}
-	}
-
-	return activations[2]
-}
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
@@ -112,6 +92,7 @@ func (nf *networkFormat) backProp(x []float64, y []float64, nablaW[][][]float64,
 // updateMiniBatches runs the stochastic gradient descent
 // algorithm for a set of mini batches
 func (nf *networkFormat) updateMiniBatches() {
+
 	nablaW := nf.cubicMatrix(zeroFunc())
 	nablaB := nf.squareMatrix(zeroFunc())
 
@@ -124,12 +105,12 @@ func (nf *networkFormat) updateMiniBatches() {
 	}
 }
 
-
 // updateWeights updates the weight matrix following a mini batch
 func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			for i := 0; i < nf.sizes[k]; i++ {
+				//fmt.Println(1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))
 				nf.weights[k][j][i] = (1 - nf.hyperParameters.eta*(nf.hyperParameters.lambda/float64(nf.data.n)))*
 					nf.weights[k][j][i] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaW[k][j][i]
 			}
@@ -139,6 +120,7 @@ func (nf *networkFormat) updateWeights(nablaW [][][]float64) {
 
 // updateBiases updates the bias matrix following a mini batch
 func (nf *networkFormat) updateBiases(nablaB [][]float64) {
+
 	for k := 0; k < len(nf.sizes) - 1; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			nf.biases[k][j] = nf.biases[k][j] - nf.hyperParameters.eta/float64(nf.data.miniBatchSize) * nablaB[k][j]
@@ -146,43 +128,25 @@ func (nf *networkFormat) updateBiases(nablaB [][]float64) {
 	}
 }
 
-func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int, eta float64, lambda float64) {
-
+func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
 	nf.data.formatData()
 	nf.hyperParameters.setHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {
-
-		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize)
+		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
 		nf.updateMiniBatches()
-
-		nf.validate(10000, nf.data.validationInput, nf.data.validationOutput)
-		nf.validate(6000, nf.data.trainingInput, nf.data.trainingOutput)
-
+		nf.validate(100, nf.data.validationInput, nf.data.validationOutput)
+		//nf.validate(600, nf.data.trainingInput, nf.data.trainingOutput)
+		fmt.Println("")
 	}
 
 }
 
 func main() {
 
-	nf := &networkFormat{sizes: []int{784, 30, 10}}
+	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-
-	//nf.backProp(x, y)
-
-	nf.trainNetwork(1000,3, 10, 0.5, 2.5)
-
-
-	//6000, 10, 2, 784 / 10
-	fmt.Println("")
-
-	//start := time.Now()
-
-	//nf.cubicMatrix(zeroFunc())
-	//elapsed := time.Since(start)
-	//log.Printf("Binomial took %s", elapsed)
-
-	//fmt.Println(nf.data.miniBatchSize)
+	nf.trainNetwork(1000,5, 10, 0.1, 1000.0, true)
 
 
 }
