@@ -89,6 +89,7 @@ func (data *data) formatData() {
 	data.initValidationData(test)
 }
 
+// shuffleTrainingData shuffles the training data
 func (data *data) shuffleTrainingData() {
 	for i := len(data.trainingInput) - 1; i > 0; i-- {
 		j := rand.Intn(i + 1)
@@ -97,6 +98,7 @@ func (data *data) shuffleTrainingData() {
 	}
 }
 
+// shuffleValidationData shuffles the validation data
 func (data *data) shuffleValidationData() {
 	for i := len(data.validationInput) - 1; i > 0; i-- {
 		j := rand.Intn(i + 1)
@@ -105,6 +107,8 @@ func (data *data) shuffleValidationData() {
 	}
 }
 
+// shuffleAllData sets a unique seed to initiate unique shuffles
+// and calls shuffleTrainingData and suffleValidationData
 func (data *data) shuffleAllData() {
 	rand.Seed(time.Now().UnixNano())
 	data.shuffleTrainingData()
@@ -125,10 +129,7 @@ func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int, shuf
 	trainingSetLength := len(data.trainingInput[dataStart:dataCap])
 	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
 	miniBatch := make([][][]float64, miniBatchSize, miniBatchSize)
-
 	data.initSizes(trainingSetLength, miniBatchSize)
-
-	// THE SAME 10 training input/output are put in each mini batch
 
 	for i := 0; i < numberOfMiniBatches; i++ {
 		for j := 0; j < miniBatchSize; j++ {

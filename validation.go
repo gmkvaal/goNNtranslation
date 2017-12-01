@@ -36,11 +36,13 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 
 func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData [][]float64) {
 	var yes, no int
+	l := len(nf.sizes) - 1 // last entry "layer-vise"
+
 	for i := range outputData[:dataCap] {
 		//fmt.Println(nf.forwardFeedValidation(inputData[:dataCap][i]))
 		//fmt.Println(outputData[:dataCap][i])
 		//fmt.Println()
-		if checkIfEqual(nf.forwardFeedValidation(inputData[:dataCap][i]), outputData[:dataCap][i]) == 1 {
+		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i], l), outputData[:dataCap][i]) == 1 {
 			yes += 1
 		} else {
 			no += 1
@@ -50,23 +52,3 @@ func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData 
 	fmt.Println(yes, no, float64(yes)/float64(yes+no))
 }
 
-func (nf networkFormat) forwardFeedValidation(x []float64) []float64 {
-	// Clearing / preparing the slices
-	l := len(nf.sizes) - 1 // last entry "layer-vise"
-
-	z := nf.squareMatrix(zeroFunc())
-	activations := nf.squareMatrixFull(zeroFunc())
-	activations[0] = x
-
-	// Forward feed
-	for k := 0; k < l; k++ {
-		for j := 0; j < nf.sizes[k+1]; j++ {
-			for i := 0; i < nf.sizes[k]; i++ {
-				z[k][j] += activations[k][i] * nf.weights[k][j][i]
-			}
-			activations[k+1][j] = sigmoid(z[k][j] + nf.biases[k][j])
-		}
-	}
-
-	return activations[2]
-}
