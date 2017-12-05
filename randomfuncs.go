@@ -3,11 +3,13 @@ package main
 import (
 	"math/rand"
 	"math"
+	"time"
 )
 
 // randomFunc returns a func that
 // generates a random number
 func randomFunc() func(int) float64 {
+	rand.Seed(time.Now().UnixNano())
 	return func(size int) float64 {
 		return float64(rand.NormFloat64()) / math.Sqrt(float64(size))
 	}

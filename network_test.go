@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"fmt"
 )
 /*
 
@@ -51,7 +52,7 @@ func TestBackProp(t *testing.T) {
 	fmt.Println(nablaB)
 }
 
-*/
+
 func TestOutputGradients(t *testing.T) {
 	nf = initNetworkForTesting()
 	l := len(nf.sizes) - 1
@@ -61,3 +62,65 @@ func TestOutputGradients(t *testing.T) {
 
 	nf.outputGradients(nablaW, nablaB, l)
 }
+*/
+
+func TestBackProp(t *testing.T) {
+
+	// 2. activations ok (forward feed ok)
+	// 3. delta ok
+	// 4. gradients at output ok
+	// 5. nablab not ok
+
+	nf := networkFormat{sizes: []int{784, 30, 10}}
+	nf.initNetwork()
+	//	nf.trainNetwork(1000,1, 10, 1, 2, false)
+
+	nf.miniBatchSize = 1
+	nf.n = 1
+	nf.hp.eta = 1
+	nf.hp.lambda = 5.0
+
+	x := make([]float64, 784, 784)
+	y := make([]float64, 10, 10)
+
+	nablaW := nf.cubicMatrix(zeroFunc())
+	nablaB := nf.squareMatrix(zeroFunc())
+
+	nablaW, nablaB = nf.backPropAlgorithm(x, y, nablaW, nablaB)
+
+	nf.updateBiases(nablaB)
+	nf.updateWeights(nablaW)
+
+	//fmt.Println(nf.biases[1])
+	//fmt.Println(nablaB[1])
+
+	//x[2] = 0.53
+	//x[3] = 0.19
+	//x[4] = 0.23
+	//x[78] = 0.59
+	//x[394] = 0.23
+	y[0] = 1
+	x[1] = 1
+
+
+	nablaW = nf.cubicMatrix(zeroFunc())
+	nablaB = nf.squareMatrix(zeroFunc())
+
+	fmt.Println("new backprop")
+
+	nablaW, nablaB = nf.backPropAlgorithm(x, y, nablaW, nablaB)
+
+	nf.updateBiases(nablaB)
+	nf.updateWeights(nablaW)
+
+	//fmt.Println(nablaW[0][0])
+	//fmt.Println("new")
+	//fmt.Println(nf.weights[0][0])
+
+
+
+	//-0.49296818647837726
+	//0.007031813521622738
+
+}
+

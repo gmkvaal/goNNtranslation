@@ -27,8 +27,8 @@ type hyperParameters struct {
 // initNetwork initiates the weights
 // and biases with random numbers
 func (nf *networkFormat) initNetwork() {
-	nf.weights = nf.cubicMatrix(randomFunc())
-	nf.biases = nf.squareMatrix(randomFunc())
+	nf.weights = nf.cubicMatrix(zeroFunc())
+	nf.biases = nf.squareMatrix(zeroFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
 	//nf.nablaW = nf.cubicMatrix(zeroFunc())
 	//nf.nablaB = nf.squareMatrix(zeroFunc())
@@ -50,7 +50,8 @@ func (nf *networkFormat) forwardFeed(x []float64, l int) []float64 {
 			for i := 0; i < nf.sizes[k]; i++ {
 				nf.z[k][j] += nf.activations[k][i] * nf.weights[k][j][i]
 			}
-			nf.activations[k+1][j] = sigmoid(nf.z[k][j] + nf.biases[k][j])
+			nf.z[k][j] += nf.biases[k][j]
+			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
 		}
 	}
 
@@ -79,11 +80,14 @@ func (nf *networkFormat) outputGradients(nablaW [][][]float64, nablaB [][]float6
 func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64, l int) ([][][]float64, [][]float64){
 
 	for k := 2; k < l+1; k++ {
+		fmt.Println(nf.z[l+1-k])
 		for j := 0; j < nf.sizes[l+1-k]; j++ {
 			nf.delta[l-k][j] = 0
 			for i := 0; i < nf.sizes[l+2-k]; i++ {
+				//fmt.Println("sig", i, sigmoidPrime(nf.z[l+1-k][i]))
 				nf.delta[l-k][j] += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l+1-k][i])
 			}
+			//fmt.Println(nf.delta[l-k][j])
 			nablaB[l-k][j] +=  nf.delta[l-k][j]
 
 			for i := 0; i < nf.sizes[l-k]; i++ {
@@ -131,8 +135,16 @@ func (nf *networkFormat) updateMiniBatches() {
 	for i := range nf.data.miniBatches {
 		for _, dataSet := range nf.data.miniBatches[i] {
 			//fmt.Println(dataSet[1])
+
 			nablaW, nablaB = nf.backPropAlgorithm(dataSet[0], dataSet[1], nablaW, nablaB)
+
 		}
+		fmt.Println(nf.weights[1][0])
+		fmt.Println()
+		fmt.Println(sum(nf.weights[1][0]))
+		fmt.Println("")
+		fmt.Println("new batch")
+		fmt.Println("")
 
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
@@ -170,16 +182,25 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 		nf.updateMiniBatches()
 		nf.validate(nf.data.validationInput, nf.data.validationOutput, 100)
 		//nf.validate(600, nf.data.trainingInput, nf.data.trainingOutput)
-		fmt.Println("")
-	}
 
+	}
+}
+
+func sum(s []float64) float64 {
+	var sum float64
+	for _, val := range s {
+		sum += val
+	}
+	return sum
 }
 
 func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,10, 10, 5, 2.5, true)
+	nf.trainNetwork(1000,1, 10, 1, 2, false)
+
+
 
 
 }
