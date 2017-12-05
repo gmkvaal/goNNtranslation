@@ -34,7 +34,7 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	}
 }
 
-func (nf networkFormat) validate(dataCap int, inputData [][]float64, outputData [][]float64) {
+func (nf networkFormat) validate(inputData [][]float64, outputData [][]float64, dataCap int) {
 	var yes, no int
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 

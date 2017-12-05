@@ -45,9 +45,6 @@ func (hp *hyperParameters) initHyperParameters(eta float64, lambda float64) {
 // forwardFeed updates all neurons for input x
 func (nf *networkFormat) forwardFeed(x []float64, l int) []float64 {
 
-	// The first row of activations is the input
-	nf.activations[0] = x
-
 	for k := 0; k < l; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
 			for i := 0; i < nf.sizes[k]; i++ {
@@ -67,8 +64,20 @@ func (nf *networkFormat) outputError(y []float64, l int) {
 	}
 }
 
+func (nf *networkFormat) outputGradients(nablaW [][][]float64, nablaB [][]float64, l int) ([][]float64, []float64) {
+	for j := 0; j < nf.sizes[l]; j++ {
+		nablaB[l-1][j] += nf.delta[l-1][j]
+		for i := 0; i < nf.sizes[l-1]; i++ {
+			nablaW[l-1][j][i] += nf.delta[l-1][j]*nf.activations[l-1][i]
+		}
+	}
+
+	return nablaW[l-1], nablaB[l-1]
+}
+
 // backPropError backpropagates the error through the hidden layers
 func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64, l int) ([][][]float64, [][]float64){
+
 	for k := 2; k < l+1; k++ {
 		for j := 0; j < nf.sizes[l+1-k]; j++ {
 			nf.delta[l-k][j] = 0
@@ -86,6 +95,7 @@ func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64,
 	return nablaW, nablaB
 }
 
+
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
 func (nf *networkFormat) backPropAlgorithm(x, y []float64, nablaW[][][]float64,
@@ -93,17 +103,19 @@ func (nf *networkFormat) backPropAlgorithm(x, y []float64, nablaW[][][]float64,
 
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
-	// 1. Forward feed
+	// 1. The first row of activations is the input
+	nf.activations[0] = x
+
+	// 2. Forward feed
 	nf.forwardFeed(x, l)
 
-	// 2. Computing the output error (delta L).
+	// 3. Computing the output error (delta L).
 	nf.outputError(y, l)
 
-	// 3. Gradients at the output layer
-	nablaB[l-1] = nf.delta[l-1]
-	nablaW[l-1] = vectorMatrixProduct(nablaW[l-1], nf.delta[l-1], nf.activations[l-1])
+	// 4. Gradients at the output layer
+	nablaW[l-1], nablaB[l-1] = nf.outputGradients(nablaW, nablaB, l)
 
-	// Backpropagating the error
+	// 5. Backpropagating the error
 	nablaW, nablaB = nf.backPropError(nablaW, nablaB, l)
 
 	return nablaW, nablaB
@@ -156,7 +168,7 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 	for i := 0; i < epochs; i++ {
 		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
 		nf.updateMiniBatches()
-		nf.validate(100, nf.data.validationInput, nf.data.validationOutput)
+		nf.validate(nf.data.validationInput, nf.data.validationOutput, 100)
 		//nf.validate(600, nf.data.trainingInput, nf.data.trainingOutput)
 		fmt.Println("")
 	}
@@ -167,7 +179,7 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,10, 10, 1, 20, false)
+	nf.trainNetwork(1000,10, 10, 5, 2.5, true)
 
 
 }
