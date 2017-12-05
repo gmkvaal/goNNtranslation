@@ -85,9 +85,9 @@ func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64,
 			nf.delta[l-k][j] = 0
 			for i := 0; i < nf.sizes[l+2-k]; i++ {
 				//fmt.Println("sig", i, sigmoidPrime(nf.z[l+1-k][i]))
-				nf.delta[l-k][j] += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l+1-k][i])
+				nf.delta[l-k][j] += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l-k][j])
 			}
-			//fmt.Println(nf.delta[l-k][j])
+			fmt.Println(nf.delta[l-k][j])
 			nablaB[l-k][j] +=  nf.delta[l-k][j]
 
 			for i := 0; i < nf.sizes[l-k]; i++ {
