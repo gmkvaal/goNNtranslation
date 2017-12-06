@@ -114,8 +114,6 @@ func (nf *networkFormat) backPropAlgorithm(x, y []float64) ([][][]float64, [][]f
 	// 2. Forward feed
 	nf.forwardFeed(x, l)
 
-	fmt.Println(nf.z)
-
 	// 3. Computing the output error (delta L).
 	nf.outputError(y, l)
 
@@ -138,20 +136,21 @@ func (nf *networkFormat) updateMiniBatches() {
 	for i := range nf.data.miniBatches {
 		nablaW := nf.cubicMatrix(zeroFunc())
 		nablaB := nf.squareMatrix(zeroFunc())
+
+		//fmt.Println(sum(nf.weights[1][0]))
+
 		for _, dataSet := range nf.data.miniBatches[i] {
 
 			deltaNablaW, deltaNablaB = nf.backPropAlgorithm(dataSet[0], dataSet[1])
 
-			//fmt.Println(deltaNablaB[1])
+			//fmt.Println(deltaNablaB[0])
+			//fmt.Println("s")
 
 			nablaW = nf.updateNablaW(deltaNablaW, nablaW)
 			nablaB = nf.updateNablaB(deltaNablaB, nablaB)
 
 		}
 
-		fmt.Println()
-		fmt.Println("updating w and b")
-		fmt.Println()
 
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
@@ -207,6 +206,7 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 	nf.hp.initHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {
+
 		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
 		nf.updateMiniBatches()
 		nf.validate(nf.data.validationInput, nf.data.validationOutput, 100)
@@ -227,7 +227,7 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,10, 10, 1, 5, true)
+	nf.trainNetwork(6000,10, 10, 1, 5, false)
 
 	fmt.Println("")
 
