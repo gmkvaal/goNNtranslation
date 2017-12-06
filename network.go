@@ -27,8 +27,8 @@ type hyperParameters struct {
 // initNetwork initiates the weights
 // and biases with random numbers
 func (nf *networkFormat) initNetwork() {
-	nf.weights = nf.cubicMatrix(zeroFunc())
-	nf.biases = nf.squareMatrix(zeroFunc())
+	nf.weights = nf.cubicMatrix(randomFunc())
+	nf.biases = nf.squareMatrix(randomFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
 	//nf.nablaW = nf.cubicMatrix(zeroFunc())
 	//nf.nablaB = nf.squareMatrix(zeroFunc())
@@ -80,14 +80,12 @@ func (nf *networkFormat) outputGradients(nablaW [][][]float64, nablaB [][]float6
 func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64, l int) ([][][]float64, [][]float64){
 
 	for k := 2; k < l+1; k++ {
-		fmt.Println(nf.z[l+1-k])
 		for j := 0; j < nf.sizes[l+1-k]; j++ {
 			nf.delta[l-k][j] = 0
 			for i := 0; i < nf.sizes[l+2-k]; i++ {
 				//fmt.Println("sig", i, sigmoidPrime(nf.z[l+1-k][i]))
 				nf.delta[l-k][j] += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l-k][j])
 			}
-			fmt.Println(nf.delta[l-k][j])
 			nablaB[l-k][j] +=  nf.delta[l-k][j]
 
 			for i := 0; i < nf.sizes[l-k]; i++ {
@@ -139,12 +137,6 @@ func (nf *networkFormat) updateMiniBatches() {
 			nablaW, nablaB = nf.backPropAlgorithm(dataSet[0], dataSet[1], nablaW, nablaB)
 
 		}
-		fmt.Println(nf.weights[1][0])
-		fmt.Println()
-		fmt.Println(sum(nf.weights[1][0]))
-		fmt.Println("")
-		fmt.Println("new batch")
-		fmt.Println("")
 
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
@@ -198,9 +190,9 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,1, 10, 1, 2, false)
+	nf.trainNetwork(1000,10, 10, 1, 5, true)
 
-
+	fmt.Println("")
 
 
 }

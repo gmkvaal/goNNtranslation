@@ -63,7 +63,7 @@ func TestOutputGradients(t *testing.T) {
 	nf.outputGradients(nablaW, nablaB, l)
 }
 */
-
+/*
 func TestBackProp(t *testing.T) {
 
 	// 2. activations ok (forward feed ok)
@@ -113,14 +113,63 @@ func TestBackProp(t *testing.T) {
 	nf.updateBiases(nablaB)
 	nf.updateWeights(nablaW)
 
-	//fmt.Println(nablaW[0][0])
+	fmt.Println(nablaB[:])
 	//fmt.Println("new")
 	//fmt.Println(nf.weights[0][0])
+}
+*/
+
+func TestBackProp2(t *testing.T) {
+	nf := networkFormat{sizes: []int{784, 30, 10}}
+
+	nf.weights = nf.cubicMatrix(zeroFunc())
+	nf.biases = nf.squareMatrix(zeroFunc())
+	nf.delta = nf.squareMatrix(zeroFunc())
+	//nf.nablaW = nf.cubicMatrix(zeroFunc())
+	//nf.nablaB = nf.squareMatrix(zeroFunc())
+	nf.z = nf.squareMatrix(zeroFunc())
+	nf.activations = nf.squareMatrixFull(zeroFunc())
 
 
+	nf.miniBatchSize = 2
+	nf.n = 4
+	nf.hp.eta = 1
+	nf.hp.lambda = 5.0
 
-	//-0.49296818647837726
-	//0.007031813521622738
+	x1 := make([]float64, 784, 784)
+	y1 := make([]float64, 10, 10)
+	y1[0] = 1
+	x1[1] = 1
+	b1 := [][]float64{x1, y1}
+
+	x2 := make([]float64, 784, 784)
+	y2 := make([]float64, 10, 10)
+	y2[1] = 1
+	x2[2] = 1
+	b2 := [][]float64{x2, y2}
+
+	miniBatchA := [][][]float64{b1, b2}
+
+	x3 := make([]float64, 784, 784)
+	y3 := make([]float64, 10, 10)
+	y3[2] = 1
+	x3[3] = 1
+	b3 := [][]float64{x3, y3}
+
+	x4 := make([]float64, 784, 784)
+	y4 := make([]float64, 10, 10)
+	y4[3] = 1
+	x4[4] = 1
+	b4 := [][]float64{x4, y4}
+
+	miniBatchB := [][][]float64{b3, b4}
+
+	miniBatches := [][][][]float64{miniBatchA, miniBatchB}
+
+	nf.data.miniBatches = miniBatches
+
+	nf.updateMiniBatches()
+
+	fmt.Println(nf.biases)
 
 }
-
