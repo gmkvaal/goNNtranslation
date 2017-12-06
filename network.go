@@ -47,10 +47,11 @@ func (nf *networkFormat) forwardFeed(x []float64, l int) []float64 {
 
 	for k := 0; k < l; k++ {
 		for j := 0; j < nf.sizes[k+1]; j++ {
+			sum := 0.0
 			for i := 0; i < nf.sizes[k]; i++ {
-				nf.z[k][j] += nf.activations[k][i] * nf.weights[k][j][i]
+				sum += nf.activations[k][i] * nf.weights[k][j][i]
 			}
-			nf.z[k][j] += nf.biases[k][j]
+			nf.z[k][j] = sum + nf.biases[k][j]
 			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
 		}
 	}
@@ -94,14 +95,16 @@ func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64,
 		}
 	}
 
+
 	return nablaW, nablaB
 }
 
-
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (nf *networkFormat) backPropAlgorithm(x, y []float64, nablaW[][][]float64,
-	  									   nablaB[][]float64) ([][][]float64, [][]float64){
+func (nf *networkFormat) backPropAlgorithm(x, y []float64) ([][][]float64, [][]float64){
+
+	nablaW := nf.cubicMatrix(zeroFunc())
+	nablaB := nf.squareMatrix(zeroFunc())
 
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
@@ -110,6 +113,8 @@ func (nf *networkFormat) backPropAlgorithm(x, y []float64, nablaW[][][]float64,
 
 	// 2. Forward feed
 	nf.forwardFeed(x, l)
+
+	fmt.Println(nf.z)
 
 	// 3. Computing the output error (delta L).
 	nf.outputError(y, l)
@@ -127,20 +132,52 @@ func (nf *networkFormat) backPropAlgorithm(x, y []float64, nablaW[][][]float64,
 // algorithm for a set of mini batches (e.g one epoch)
 func (nf *networkFormat) updateMiniBatches() {
 
-	nablaW := nf.cubicMatrix(zeroFunc())
-	nablaB := nf.squareMatrix(zeroFunc())
+	deltaNablaW := nf.cubicMatrix(zeroFunc())
+	deltaNablaB := nf.squareMatrix(zeroFunc())
 
 	for i := range nf.data.miniBatches {
+		nablaW := nf.cubicMatrix(zeroFunc())
+		nablaB := nf.squareMatrix(zeroFunc())
 		for _, dataSet := range nf.data.miniBatches[i] {
-			//fmt.Println(dataSet[1])
 
-			nablaW, nablaB = nf.backPropAlgorithm(dataSet[0], dataSet[1], nablaW, nablaB)
+			deltaNablaW, deltaNablaB = nf.backPropAlgorithm(dataSet[0], dataSet[1])
+
+			//fmt.Println(deltaNablaB[1])
+
+			nablaW = nf.updateNablaW(deltaNablaW, nablaW)
+			nablaB = nf.updateNablaB(deltaNablaB, nablaB)
 
 		}
+
+		fmt.Println()
+		fmt.Println("updating w and b")
+		fmt.Println()
 
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
 	}
+}
+
+func (nf *networkFormat) updateNablaB(deltaNablaB [][]float64,	nablaB [][]float64) [][]float64 {
+	for k := 0; k < len(nf.sizes) - 1; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+				nablaB[k][j] += deltaNablaB[k][j]
+				}
+	}
+
+	return nablaB
+}
+
+func (nf *networkFormat) updateNablaW(deltaNablaW[][][]float64,	nablaW [][][]float64) [][][]float64 {
+	for k := 0; k < len(nf.sizes) - 1; k++ {
+		for j := 0; j < nf.sizes[k+1]; j++ {
+			for i := 0; i < nf.sizes[k]; i++ {
+				nablaW[k][j][i] += deltaNablaW[k][j][i]
+			}
+		}
+	}
+
+	return nablaW
 }
 
 // updateWeights updates the weight matrix following a mini batch

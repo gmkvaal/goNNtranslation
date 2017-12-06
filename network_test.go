@@ -122,14 +122,13 @@ func TestBackProp(t *testing.T) {
 func TestBackProp2(t *testing.T) {
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 
-	nf.weights = nf.cubicMatrix(zeroFunc())
-	nf.biases = nf.squareMatrix(zeroFunc())
+	nf.weights = nf.cubicMatrix(oneFunc())
+	nf.biases = nf.squareMatrix(oneFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
 	//nf.nablaW = nf.cubicMatrix(zeroFunc())
 	//nf.nablaB = nf.squareMatrix(zeroFunc())
 	nf.z = nf.squareMatrix(zeroFunc())
 	nf.activations = nf.squareMatrixFull(zeroFunc())
-
 
 	nf.miniBatchSize = 2
 	nf.n = 4
@@ -148,28 +147,42 @@ func TestBackProp2(t *testing.T) {
 	x2[2] = 1
 	b2 := [][]float64{x2, y2}
 
-	miniBatchA := [][][]float64{b1, b2}
-
 	x3 := make([]float64, 784, 784)
 	y3 := make([]float64, 10, 10)
 	y3[2] = 1
 	x3[3] = 1
-	b3 := [][]float64{x3, y3}
+	//b3 := [][]float64{x3, y3}
 
 	x4 := make([]float64, 784, 784)
 	y4 := make([]float64, 10, 10)
 	y4[3] = 1
 	x4[4] = 1
-	b4 := [][]float64{x4, y4}
+	//b4 := [][]float64{x4, y4}
 
-	miniBatchB := [][][]float64{b3, b4}
+	//nablaW := nf.cubicMatrix(zeroFunc())
+	//nablaB := nf.squareMatrix(zeroFunc())
+	//nablaW, nablaB = nf.backPropAlgorithm(b1[0], b1[1], nablaW, nablaB)
+	//nablaW, nablaB = nf.backPropAlgorithm(b2[0], b2[1], nablaW, nablaB)
+	//nf.updateBiases(nablaB)
+	//nf.updateWeights(nablaW)
 
-	miniBatches := [][][][]float64{miniBatchA, miniBatchB}
+	//nablaW = nf.cubicMatrix(zeroFunc())
+	//nablaB = nf.squareMatrix(zeroFunc())
+	//nablaW, nablaB = nf.backPropAlgorithm(b3[0], b3[1], nablaW, nablaB)
+	//nablaW, nablaB = nf.backPropAlgorithm(b4[0], b4[1], nablaW, nablaB)
+	//nf.updateBiases(nablaB)
+	//nf.updateWeights(nablaW)
 
+	miniBatchA := [][][]float64{b1, b2}
+	//miniBatchB := [][][]float64{b3, b4}
+	miniBatches := [][][][]float64{miniBatchA, miniBatchA}
 	nf.data.miniBatches = miniBatches
-
 	nf.updateMiniBatches()
 
-	fmt.Println(nf.biases)
 
+	fmt.Println()
+	//fmt.Println(nf.biases[1])
+
+	// manual method [-0.5 -0.5 -0.007133527010650342 -0.007133527010650342 -0.5071335270106503 -0.5071335270106503 -0.5071335270106503 -0.5071335270106503 -0.5071335270106503 -0.5071335270106503]
+	// auto method [-0.5 -0.5 -0.5071335270106504 -0.5071335270106503 -1.0071335270106503 -1.0071335270106503 -1.0071335270106503 -1.0071335270106503 -1.0071335270106503 -1.0071335270106503]
 }

@@ -22,3 +22,8 @@ func zeroFunc() func(int) float64 {
 	}
 }
 
+func oneFunc() func(int) float64 {
+	return func(size int) float64 {
+		return 1
+	}
+}
