@@ -2,8 +2,9 @@ package main
 
 import (
 	"testing"
-
 	"fmt"
+
+	plr "github.com/gmkvaal/pythonlistreader"
 )
 /*
 
@@ -63,70 +64,20 @@ func TestOutputGradients(t *testing.T) {
 	nf.outputGradients(nablaW, nablaB, l)
 }
 */
-/*
+
+
+// TestBackProp tests the back propagation algorithm
+// by running through two mini batches of length two,
+// and then comparing the weights and biases with the
+// validated solver https://github.com/mnielsen/neural-networks-and-deep-learning/tree/master/src/network2
+// Weights and biases are for the purpose of creating
+// a deterministic result initiated as 1's.
 func TestBackProp(t *testing.T) {
-
-	// 2. activations ok (forward feed ok)
-	// 3. delta ok
-	// 4. gradients at output ok
-	// 5. nablab not ok
-
-	nf := networkFormat{sizes: []int{784, 30, 10}}
-	nf.initNetwork()
-	//	nf.trainNetwork(1000,1, 10, 1, 2, false)
-
-	nf.miniBatchSize = 1
-	nf.n = 1
-	nf.hp.eta = 1
-	nf.hp.lambda = 5.0
-
-	x := make([]float64, 784, 784)
-	y := make([]float64, 10, 10)
-
-	nablaW := nf.cubicMatrix(zeroFunc())
-	nablaB := nf.squareMatrix(zeroFunc())
-
-	nablaW, nablaB = nf.backPropAlgorithm(x, y, nablaW, nablaB)
-
-	nf.updateBiases(nablaB)
-	nf.updateWeights(nablaW)
-
-	//fmt.Println(nf.biases[1])
-	//fmt.Println(nablaB[1])
-
-	//x[2] = 0.53
-	//x[3] = 0.19
-	//x[4] = 0.23
-	//x[78] = 0.59
-	//x[394] = 0.23
-	y[0] = 1
-	x[1] = 1
-
-
-	nablaW = nf.cubicMatrix(zeroFunc())
-	nablaB = nf.squareMatrix(zeroFunc())
-
-	fmt.Println("new backprop")
-
-	nablaW, nablaB = nf.backPropAlgorithm(x, y, nablaW, nablaB)
-
-	nf.updateBiases(nablaB)
-	nf.updateWeights(nablaW)
-
-	fmt.Println(nablaB[:])
-	//fmt.Println("new")
-	//fmt.Println(nf.weights[0][0])
-}
-*/
-
-func TestBackProp2(t *testing.T) {
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 
 	nf.weights = nf.cubicMatrix(oneFunc())
 	nf.biases = nf.squareMatrix(oneFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
-	//nf.nablaW = nf.cubicMatrix(zeroFunc())
-	//nf.nablaB = nf.squareMatrix(zeroFunc())
 	nf.z = nf.squareMatrix(zeroFunc())
 	nf.activations = nf.squareMatrixFull(zeroFunc())
 
@@ -151,36 +102,56 @@ func TestBackProp2(t *testing.T) {
 	y3 := make([]float64, 10, 10)
 	y3[2] = 1
 	x3[3] = 1
-	//b3 := [][]float64{x3, y3}
+	b3 := [][]float64{x3, y3}
 
 	x4 := make([]float64, 784, 784)
 	y4 := make([]float64, 10, 10)
 	y4[3] = 1
 	x4[4] = 1
-	//b4 := [][]float64{x4, y4}
-
-	//nablaW := nf.cubicMatrix(zeroFunc())
-	//nablaB := nf.squareMatrix(zeroFunc())
-	//nablaW, nablaB = nf.backPropAlgorithm(b1[0], b1[1], nablaW, nablaB)
-	//nablaW, nablaB = nf.backPropAlgorithm(b2[0], b2[1], nablaW, nablaB)
-	//nf.updateBiases(nablaB)
-	//nf.updateWeights(nablaW)
-
-	//nablaW = nf.cubicMatrix(zeroFunc())
-	//nablaB = nf.squareMatrix(zeroFunc())
-	//nablaW, nablaB = nf.backPropAlgorithm(b3[0], b3[1], nablaW, nablaB)
-	//nablaW, nablaB = nf.backPropAlgorithm(b4[0], b4[1], nablaW, nablaB)
-	//nf.updateBiases(nablaB)
-	//nf.updateWeights(nablaW)
+	b4 := [][]float64{x4, y4}
 
 	miniBatchA := [][][]float64{b1, b2}
-	//miniBatchB := [][][]float64{b3, b4}
-	miniBatches := [][][][]float64{miniBatchA, miniBatchA}
+	miniBatchB := [][][]float64{b3, b4}
+	miniBatches := [][][][]float64{miniBatchA, miniBatchB}
 	nf.data.miniBatches = miniBatches
 	nf.updateMiniBatches()
 
 
-	fmt.Println()
-	fmt.Println(nf.weights[1][3])
+	testData, err := plr.ReadFile("testdata/bias1.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bias1FromPy := plr.PythonFloatListParser(testData)
+
+	testData, err = plr.ReadFile("testdata/bias0.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bias0FromPy := plr.PythonFloatListParser(testData)
+
+	testData, err = plr.ReadFile("testdata/weights1.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	weights1FromPy := plr.PythonNestedFloatListParser(testData)
+	fmt.Println(weights1FromPy)
+
+
+	for idx := range bias1FromPy {
+		if bias1FromPy[idx] - nf.biases[1][idx] > 1e-7 {
+			t.Error("not equal", bias1FromPy[idx], nf.biases[1][idx])
+		}
+	}
+
+	for idx := range bias0FromPy {
+		if bias0FromPy[idx] - nf.biases[0][idx] > 1e-7 {
+			t.Error("not equal", bias0FromPy[idx], nf.biases[0][idx])
+		}
+	}
+
+	fmt.Println("")
 
 }

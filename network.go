@@ -215,13 +215,7 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 	}
 }
 
-func sum(s []float64) float64 {
-	var sum float64
-	for _, val := range s {
-		sum += val
-	}
-	return sum
-}
+
 
 func main() {
 
