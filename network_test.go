@@ -136,8 +136,17 @@ func TestBackProp(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	fmt.Println(testData)
+
 	weights1FromPy := plr.PythonNestedFloatListParser(testData)
-	fmt.Println(weights1FromPy)
+
+	//fmt.Println(len(weights1FromPy))
+	//fmt.Println(len(nf.weights[1]))
+
+	for i := range weights1FromPy {
+		fmt.Println("py", weights1FromPy[i], len(weights1FromPy[i]))
+		fmt.Println( )
+	}
 
 
 	for idx := range bias1FromPy {
@@ -152,6 +161,11 @@ func TestBackProp(t *testing.T) {
 		}
 	}
 
-	fmt.Println("")
-
+	for idx1 := range weights1FromPy {
+		for idx2 := range weights1FromPy[idx1] {
+			if weights1FromPy[idx1][idx2] - nf.weights[1][idx1][idx2] > 1e-7 {
+				t.Error("not equal", weights1FromPy[idx1][idx2], nf.weights[1][idx1][idx2])
+			}
+		}
+	}
 }

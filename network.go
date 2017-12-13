@@ -95,7 +95,6 @@ func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64,
 		}
 	}
 
-
 	return nablaW, nablaB
 }
 
