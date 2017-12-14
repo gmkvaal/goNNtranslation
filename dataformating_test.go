@@ -31,7 +31,6 @@ func TestLabelToArray(t *testing.T) {
 	for label, slice := range N {
 		assert.Equal(t, labelToArray(label), slice)
 	}
-
 }
 
 
@@ -47,7 +46,7 @@ func TestShuffleAllData(t *testing.T) {
 		assert.Equal(t, len(nf.validationOutput), 10000)
 	}(t)
 
-	// Appending the index number to the last entry to match input output
+	// Appending the index number to the last entry to match input with output
 	for i := 0; i < len(nf.trainingInput); i++ {
 		nf.trainingInput[i] = append(nf.trainingInput[i], float64(i))
 		nf.trainingOutput[i] = append(nf.trainingOutput[i], float64(i))

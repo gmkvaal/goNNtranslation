@@ -17,35 +17,6 @@ type data struct {
 	miniBatchSize float64
 }
 
-// customSliceToFloat64Slice converts the entries of the loaded
-// MNIST data from a custom type to float64
-func customSliceToFloat64Slice(s GoMNIST.RawImage) []float64 {
-
-	// Divinding on 255.0 to scale the
-	// input into the range 0 - 1.
-	var normalSlice []float64
-	for idx := range s {
-		normalSlice = append(normalSlice, float64(s[idx])/255.0)
-	}
-
-	return normalSlice
-}
-
-// labelToArray converts the base integers into an
-// array with '1' at the respective entry, rest 0
-func labelToArray(label int) ([]float64) {
-
-	tennerArray := make([]float64, 10.0, 10.0)
-
-	if label > 9 {
-		return tennerArray
-	}
-
-	tennerArray[label] = 1
-
-	return tennerArray
-}
-
 // initTrainingData initiates trainingInput and trainingOutput
 // with data from MNIST. trainingInput is a slice containing slices (60000)
 // with data representing the pixel input (28*28). trainingOutput is a slice
@@ -126,21 +97,45 @@ func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int, shuf
 		data.shuffleAllData()
 	}
 
+
 	trainingSetLength := len(data.trainingInput[dataStart:dataCap])
 	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
-	miniBatch := make([][][]float64, miniBatchSize, miniBatchSize)
+	data.miniBatches = make([][][][]float64, numberOfMiniBatches, numberOfMiniBatches)
 	data.initSizes(trainingSetLength, miniBatchSize)
 
 	for i := 0; i < numberOfMiniBatches; i++ {
+		data.miniBatches[i] = make([][][]float64, miniBatchSize, miniBatchSize)
 		for j := 0; j < miniBatchSize; j++ {
-			miniBatch[j] = [][]float64{data.trainingInput[i*miniBatchSize + j],
-									   data.trainingOutput[i*miniBatchSize + j]}
+			data.miniBatches[i][j] = [][]float64{data.trainingInput[i*miniBatchSize + j],
+				data.trainingOutput[i*miniBatchSize + j]}
 		}
-		data.miniBatches = append(data.miniBatches, miniBatch)
 	}
-
-	//for i := 0; i < dataCap; i++ {
-	//	fmt.Println(data.miniBatches[1][i][1])
-	//}
 }
 
+// customSliceToFloat64Slice converts the entries of the loaded
+// MNIST data from a custom type to float64
+func customSliceToFloat64Slice(s GoMNIST.RawImage) []float64 {
+	// Divinding on 255.0 to scale the
+	// input into the range 0 - 1.
+	var normalSlice []float64
+	for idx := range s {
+		normalSlice = append(normalSlice, float64(s[idx])/255.0)
+	}
+
+	return normalSlice
+}
+
+// labelToArray converts the base integers into an
+// array with '1' at the respective entry, rest 0
+func labelToArray(label int) ([]float64) {
+
+	tennerArray := make([]float64, 10.0, 10.0)
+
+	if label > 9 {
+		return tennerArray
+	}
+
+	tennerArray[label] = 1
+
+	return tennerArray
+}

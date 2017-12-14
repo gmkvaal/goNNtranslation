@@ -84,7 +84,6 @@ func (nf *networkFormat) backPropError(nablaW [][][]float64, nablaB [][]float64,
 		for j := 0; j < nf.sizes[l+1-k]; j++ {
 			nf.delta[l-k][j] = 0
 			for i := 0; i < nf.sizes[l+2-k]; i++ {
-				//fmt.Println("sig", i, sigmoidPrime(nf.z[l+1-k][i]))
 				nf.delta[l-k][j] += nf.weights[l+1-k][i][j] * nf.delta[l+1-k][i] * sigmoidPrime(nf.z[l-k][j])
 			}
 			nablaB[l-k][j] +=  nf.delta[l-k][j]
@@ -136,20 +135,11 @@ func (nf *networkFormat) updateMiniBatches() {
 		nablaW := nf.cubicMatrix(zeroFunc())
 		nablaB := nf.squareMatrix(zeroFunc())
 
-		//fmt.Println(sum(nf.weights[1][0]))
-
 		for _, dataSet := range nf.data.miniBatches[i] {
-
 			deltaNablaW, deltaNablaB = nf.backPropAlgorithm(dataSet[0], dataSet[1])
-
-			//fmt.Println(deltaNablaB[0])
-			//fmt.Println("s")
-
 			nablaW = nf.updateNablaW(deltaNablaW, nablaW)
 			nablaB = nf.updateNablaB(deltaNablaB, nablaB)
-
 		}
-
 
 		nf.updateWeights(nablaW)
 		nf.updateBiases(nablaB)
@@ -205,11 +195,10 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 	nf.hp.initHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {
-
 		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
 		nf.updateMiniBatches()
 		nf.validate(nf.data.validationInput, nf.data.validationOutput, 100)
-		//nf.validate(600, nf.data.trainingInput, nf.data.trainingOutput)
+		//nf.validate(nf.data.trainingInput, nf.data.trainingOutput, 100)
 
 	}
 }
@@ -220,7 +209,7 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(6000,10, 10, 1, 5, false)
+	nf.trainNetwork(1000,10, 5, 0.05, 0.01, true)
 
 	fmt.Println("")
 

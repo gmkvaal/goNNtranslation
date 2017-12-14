@@ -2,12 +2,12 @@ package main
 
 import (
 	"testing"
+
+	//plr "github.com/gmkvaal/pythonlistreader"
 	"fmt"
-
-	plr "github.com/gmkvaal/pythonlistreader"
 )
-/*
 
+/*
 // TestForwardFeed tests the forward feed algorithm
 // by initiating with zero-weights and biases, hence making
 // all z's zero and thus all activations 1/2 (given sigmoids)
@@ -34,7 +34,7 @@ func TestOutputError(t *testing.T) {
 	assert.Equal(t, nf.delta[l-1], yNeg)
 }
 
-func TestBackProp(t *testing.T) {
+func TestBackPropShort(t *testing.T) {
 	nf = initNetworkForTesting()
 	l := len(nf.sizes) - 1
 
@@ -48,9 +48,6 @@ func TestBackProp(t *testing.T) {
 	nablaB[l-1] = nf.delta[l-1]
 	nablaW[l-1] = vectorMatrixProduct(nablaW[l-1], nf.delta[l-1], nf.activations[l-1])
 	nablaW, nablaB = nf.backPropError(nablaW, nablaB, l)
-
-	fmt.Println("nab")
-	fmt.Println(nablaB)
 }
 
 
@@ -63,7 +60,7 @@ func TestOutputGradients(t *testing.T) {
 
 	nf.outputGradients(nablaW, nablaB, l)
 }
-*/
+
 
 
 // TestBackProp tests the back propagation algorithm
@@ -145,15 +142,6 @@ func TestBackProp(t *testing.T) {
 
 	weights0FromPy := plr.PythonNestedFloatListParser(testData)
 
-	//fmt.Println(len(weights1FromPy))
-	//fmt.Println(len(nf.weights[1]))
-
-	for i := range weights1FromPy {
-		fmt.Println("py", weights1FromPy[i], len(weights1FromPy[i]))
-		fmt.Println( )
-	}
-
-
 	for idx := range bias1FromPy {
 		if bias1FromPy[idx] - nf.biases[1][idx] > 1e-7 {
 			t.Error("not equal", bias1FromPy[idx], nf.biases[1][idx])
@@ -181,4 +169,86 @@ func TestBackProp(t *testing.T) {
 			}
 		}
 	}
+}
+
+
+*/
+
+func vizNumber(s []float64) {
+	for idx := range s {
+		if s[idx] > 0 {
+			s[idx] = 1
+		}
+	}
+	counter := 0
+	matrix := make([][]float64, 28, 28)
+	for i := 0; i < 28; i++ {
+		matrix[i] = make([]float64, 28, 28)
+		for j := 0; j < 28; j++ {
+			matrix[i][j] = s[counter]
+			counter++
+		}
+	}
+
+	for i := 0; i < 28; i++ {
+		fmt.Println(matrix[i])
+	}
+}
+
+func TestIt(t *testing.T) {
+	fmt.Println()
+	nf := networkFormat{sizes: []int{784, 100, 10}}
+	nf.initNetwork()
+
+	nf.hp.initHyperParameters(1,0.5)
+	nf.data.formatData()
+
+	//x2 := nf.miniBatches[1][0][0]
+	//yReal2 := nf.data.miniBatches[1][0][1]
+
+
+	//fmt.Println(nf.miniBatches)
+
+	fmt.Println()
+	//fmt.Println(yReal1, yReal2)
+
+
+	//for i := 0; i < 10; i++ {
+	//	for j := 0; j < 10; j++ {
+	//		fmt.Println(nf.data.miniBatches[i][j][1])
+	//	}
+	//}
+
+
+	nf.data.miniBatchGenerator(0, 1000, 10, true)
+	//x2 := nf.miniBatches[1][0][0]
+	//yReal2 := nf.data.miniBatches[1][0][1]
+
+
+
+	l := len(nf.sizes) - 1 // last entry "layer-vise"
+	for i := 0; i < 10; i++ {
+
+		nf.data.miniBatchGenerator(0, 10000, 10, true)
+		x1 := nf.miniBatches[0][0][0]
+		yReal1 := nf.data.miniBatches[0][0][1]
+		nf.updateMiniBatches()
+		y1 := nf.forwardFeed(x1, l)
+
+		fmt.Println(y1, yReal1)
+
+		fmt.Println(checkIfEqual(y1, yReal1))
+	}
+
+
+
+
+
+
+	//inputData := [][]float64{nf.miniBatches[0][0][0], nf.miniBatches[0][1][0]}
+	//outputData := [][]float64{nf.miniBatches[0][0][1], nf.miniBatches[0][1][1]}
+
+	//nf.validate(inputData, outputData, 2)
+
+
 }
