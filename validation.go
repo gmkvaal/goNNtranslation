@@ -37,9 +37,7 @@ func (nf networkFormat) validate(inputData, outputData [][]float64, dataCap int)
 	l := len(nf.sizes) - 1 // last entry "layer-vise"
 
 	for i := range outputData[:dataCap] {
-		//fmt.Println(nf.forwardFeedValidation(inputData[:dataCap][i]))
-		//fmt.Println(outputData[:dataCap][i])
-		//fmt.Println()
+
 		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i], l), outputData[:dataCap][i]) == 1 {
 			yes += 1
 		} else {

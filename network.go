@@ -200,6 +200,8 @@ func (nf *networkFormat) trainNetwork(dataCap int, epochs int, miniBatchSize int
 		nf.validate(nf.data.validationInput, nf.data.validationOutput, 100)
 		//nf.validate(nf.data.trainingInput, nf.data.trainingOutput, 100)
 
+		fmt.Println(nf.totalCost(nf.data.validationInput[:dataCap], nf.data.validationInput[:dataCap]))
+
 	}
 }
 
@@ -209,7 +211,7 @@ func main() {
 
 	nf := networkFormat{sizes: []int{784, 30, 10}}
 	nf.initNetwork()
-	nf.trainNetwork(1000,10, 5, 0.05, 0.01, true)
+	nf.trainNetwork(1000,10, 5, 1, 1, true)
 
 	fmt.Println("")
 
