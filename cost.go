@@ -22,7 +22,7 @@ func (nf NetworkFormat) totalCost(inputData, outputData [][]float64) float64 {
 	N := float64(len(outputData))
 
 	for idx := range outputData {
-		a = nf.forwardFeed(inputData[idx], len(nf.Sizes)-1)
+		a = nf.forwardFeed(inputData[idx])
 		cost += xEntropyCost(a, outputData[idx])
 	}
 
