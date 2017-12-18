@@ -1,14 +1,22 @@
-package main
+package network
+/*
+import (
+	"github.com/stretchr/testify/assert"
+	"github.com/gmkvaal/goNNtranslation/train/MNIST"
+)
+
+
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/gmkvaal/goNNtranslation/train/MNIST"
 )
 
-var nf *networkFormat
+var nf *NetworkFormat
 
-func initNetworkForTesting() *networkFormat {
-	nf = &networkFormat{sizes: []int{784, 30, 10}}
+func initNetworkForTesting() *NetworkFormat {
+	nf = &NetworkFormat{Sizes: []int{784, 30, 10}}
 	nf.initNetwork()
 	nf.formatData()
 	return nf
@@ -29,7 +37,7 @@ func TestLabelToArray(t *testing.T) {
 
 	N := [][]float64{n1,n2,n3,n4,n5,n6,n7,n8,n9,n10}
 	for label, slice := range N {
-		assert.Equal(t, labelToArray(label), slice)
+		assert.Equal(t, MNIST.LabelToArray(label), slice)
 	}
 }
 
@@ -68,3 +76,5 @@ func TestShuffleAllData(t *testing.T) {
 		assert.Equal(t, nf.validationInput[i][784], nf.validationOutput[i][10])
 	}
 }
+
+*/

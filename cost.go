@@ -1,4 +1,4 @@
-package main
+package network
 
 import "math"
 
@@ -16,27 +16,28 @@ func xEntropyCost(a, y []float64) float64 {
 	return sum
 }
 
-func (nf networkFormat) totalCost(inputData, outputData [][]float64) float64 {
+func (nf NetworkFormat) totalCost(inputData, outputData [][]float64) float64 {
 	var cost float64
 	var a []float64
 	N := float64(len(outputData))
 
 	for idx := range outputData {
-		a = nf.forwardFeed(inputData[idx], len(nf.sizes)-1)
+		a = nf.forwardFeed(inputData[idx], len(nf.Sizes)-1)
 		cost += xEntropyCost(a, outputData[idx])
 	}
+
 	cost = cost / (2*N)
 
 	var sumWeights float64
-	for k := 0; k < len(nf.sizes)-1; k++ {
-		for j := 0; j < nf.sizes[k+1]; j++ {
-			for i := 0; i < nf.sizes[k]; i++ {
+	for k := 0; k < len(nf.Sizes)-1; k++ {
+		for j := 0; j < nf.Sizes[k+1]; j++ {
+			for i := 0; i < nf.Sizes[k]; i++ {
 				sumWeights += nf.weights[k][j][i]*nf.weights[k][j][i]
 			}
 		}
 	}
-	sumWeights = sumWeights * nf.hp.lambda/(2*N)
 
+	sumWeights = sumWeights * nf.hp.lambda/(2*N)
 	cost += sumWeights
 
 	return cost

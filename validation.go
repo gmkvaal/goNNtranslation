@@ -1,4 +1,4 @@
-package main
+package network
 
 import "fmt"
 
@@ -25,6 +25,7 @@ func argMax (s []float64) int {
 // validate checks if the output from the network matches
 // the the validation output. Returns 1 if true, 0 if false
 func checkIfEqual(yNetwork []float64, y []float64) int {
+
 	if argMax(yNetwork) == argMax(y) {
 		return 1
 	} else {
@@ -32,12 +33,11 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	}
 }
 
-func (nf networkFormat) validate(inputData, outputData [][]float64, dataCap int) {
+func (nf NetworkFormat) validate(inputData, outputData [][]float64, dataCap int) {
 	var yes, no int
-	l := len(nf.sizes) - 1 // last entry "layer-vise"
+	l := len(nf.Sizes) - 1 // last entry "layer-vise"
 
 	for i := range outputData[:dataCap] {
-
 		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i], l), outputData[:dataCap][i]) == 1 {
 			yes += 1
 		} else {
@@ -45,6 +45,6 @@ func (nf networkFormat) validate(inputData, outputData [][]float64, dataCap int)
 		}
 	}
 
-	fmt.Println(yes, no, float64(yes)/float64(yes+no))
+	fmt.Println("Hitrate:", 100*float64(yes)/float64(yes+no), "%")
 }
 

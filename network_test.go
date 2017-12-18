@@ -1,11 +1,11 @@
-package main
+package network
 
 import (
 	"testing"
 
 	//plr "github.com/gmkvaal/pythonlistreader"
 	"fmt"
-)
+	)
 
 /*
 // TestForwardFeed tests the forward feed algorithm
@@ -15,7 +15,7 @@ func TestForwardFeed(t *testing.T) {
 	nf = initNetworkForTesting()
 	nf.weights = nf.cubicMatrix(zeroFunc())
 	nf.biases = nf.squareMatrix(zeroFunc())
-	l := len(nf.sizes) - 1
+	l := len(nf.Sizes) - 1
 
 	x := make([]float64, 784, 784)
 	y := []float64{0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5}
@@ -25,7 +25,7 @@ func TestForwardFeed(t *testing.T) {
 
 func TestOutputError(t *testing.T) {
 	nf = initNetworkForTesting()
-	l := len(nf.sizes) - 1
+	l := len(nf.Sizes) - 1
 
 	y := []float64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	yNeg := []float64{-1, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -36,7 +36,7 @@ func TestOutputError(t *testing.T) {
 
 func TestBackPropShort(t *testing.T) {
 	nf = initNetworkForTesting()
-	l := len(nf.sizes) - 1
+	l := len(nf.Sizes) - 1
 
 	nablaW := nf.cubicMatrix(zeroFunc())
 	nablaB := nf.squareMatrix(zeroFunc())
@@ -53,7 +53,7 @@ func TestBackPropShort(t *testing.T) {
 
 func TestOutputGradients(t *testing.T) {
 	nf = initNetworkForTesting()
-	l := len(nf.sizes) - 1
+	l := len(nf.Sizes) - 1
 
 	nablaW := nf.cubicMatrix(zeroFunc())
 	nablaB := nf.squareMatrix(zeroFunc())
@@ -70,7 +70,7 @@ func TestOutputGradients(t *testing.T) {
 // Weights and biases are for the purpose of creating
 // a deterministic result initiated as 1's.
 func TestBackProp(t *testing.T) {
-	nf := networkFormat{sizes: []int{784, 30, 10}}
+	nf := networkFormat{Sizes: []int{784, 30, 10}}
 
 	nf.weights = nf.cubicMatrix(oneFunc())
 	nf.biases = nf.squareMatrix(oneFunc())
@@ -180,6 +180,7 @@ func vizNumber(s []float64) {
 			s[idx] = 1
 		}
 	}
+
 	counter := 0
 	matrix := make([][]float64, 28, 28)
 	for i := 0; i < 28; i++ {
@@ -197,58 +198,76 @@ func vizNumber(s []float64) {
 
 func TestIt(t *testing.T) {
 	fmt.Println()
-	nf := networkFormat{sizes: []int{784, 100, 10}}
+	nf := NetworkFormat{Sizes: []int{2, 3, 1}}
 	nf.initNetwork()
+	nf.data.loadData()
+	nf.n = 4
+	nf.hp.eta = 0.5
+	nf.hp.lambda = 0.001
 
-	nf.hp.initHyperParameters(1,0.5)
-	nf.data.formatData()
+	/*
+	w11 := []float64{-0.95766323, -2.83527046}
+	w12 := []float64{-4.68051798, -3.67367494}
+	w13 := []float64{-3.42136137, -3.66026809}
+	w21 := []float64{3.23952935,  9.16831414,  7.20927857}
 
-	//x2 := nf.miniBatches[1][0][0]
-	//yReal2 := nf.data.miniBatches[1][0][1]
+	nf.weights = [][][]float64{{w11, w12, w13}, {w21}}
 
+	b11 := 1.47931576
+	b12 := 5.76116679
+	b13 := 4.77665241
+	b21 := -7.41086319
 
-	//fmt.Println(nf.miniBatches)
+	nf.biases = [][]float64{{b11, b12, b13}, {b21}}
+	*/
 
-	fmt.Println()
-	//fmt.Println(yReal1, yReal2)
+	//nf.miniBatchGenerator(0, 4, 1, true)
 
-
-	//for i := 0; i < 10; i++ {
-	//	for j := 0; j < 10; j++ {
-	//		fmt.Println(nf.data.miniBatches[i][j][1])
-	//	}
-	//}
-
-
-	nf.data.miniBatchGenerator(0, 1000, 10, true)
-	//x2 := nf.miniBatches[1][0][0]
-	//yReal2 := nf.data.miniBatches[1][0][1]
-
-
-
-	l := len(nf.sizes) - 1 // last entry "layer-vise"
-	for i := 0; i < 10; i++ {
-
-		nf.data.miniBatchGenerator(0, 10000, 10, true)
-		x1 := nf.miniBatches[0][0][0]
-		yReal1 := nf.data.miniBatches[0][0][1]
+	for i := 0; i < 1000; i++ {
+		nf.miniBatchGenerator(0, 4, 1, false)
 		nf.updateMiniBatches()
-		y1 := nf.forwardFeed(x1, l)
-
-		fmt.Println(y1, yReal1)
-
-		fmt.Println(checkIfEqual(y1, yReal1))
 	}
 
+	var y []float64
+	y = nf.forwardFeed([]float64{0, 0}, 2)
+	fmt.Println(y, 1)
+	y = nf.forwardFeed([]float64{1, 0}, 2)
+	fmt.Println(y, 1)
+	y = nf.forwardFeed([]float64{0, 1}, 2)
+	fmt.Println(y, 1)
+	y = nf.forwardFeed([]float64{1, 1}, 2)
+	fmt.Println(y, 0)
+
+	fmt.Println()
 
 
 
 
+	/*
+	for factor := 0; factor < 100; factor++ {
+		nf.hp.lambda = float64(factor) * 0.01
 
-	//inputData := [][]float64{nf.miniBatches[0][0][0], nf.miniBatches[0][1][0]}
-	//outputData := [][]float64{nf.miniBatches[0][0][1], nf.miniBatches[0][1][1]}
+		for i := 0; i < 500; i++ {
+			nf.miniBatchGenerator(0, 4, 4, true)
+			nf.updateMiniBatches()
+		}
 
-	//nf.validate(inputData, outputData, 2)
+		fmt.Println(nf.hp.lambda)
+		y = nf.forwardFeed([]float64{0, 0}, 2)
+		fmt.Println(y, 1)
+		y = nf.forwardFeed([]float64{1, 0}, 2)
+		fmt.Println(y, 1)
+		y = nf.forwardFeed([]float64{0, 1}, 2)
+		fmt.Println(y, 1)
+		y = nf.forwardFeed([]float64{1, 1}, 2)
+		fmt.Println(y, 0)
 
+		fmt.Println()
 
+		//fmt.Println(nf.weights)
+
+		//nf.TrainNetwork(0, 10, 4, 0.1, 0.1, false)
+
+	}
+	*/
 }
