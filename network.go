@@ -11,8 +11,8 @@ type NetworkFormat struct {
 	biases      [][]float64
 	weights     [][][]float64
 	delta       [][]float64
-	//nablaW      [][][]float64
-	//nablaB      [][]float64
+	nablaW      [][][]float64
+	nablaB      [][]float64
 	z           [][]float64
 	activations [][]float64
 	data
@@ -30,8 +30,8 @@ func (nf *NetworkFormat) initNetwork() {
 	nf.weights = nf.cubicMatrix(randomFunc())
 	nf.biases = nf.squareMatrix(randomFunc())
 	nf.delta = nf.squareMatrix(zeroFunc())
-	//nf.nablaW = nf.cubicMatrix(zeroFunc())
-	//nf.nablaB = nf.squareMatrix(zeroFunc())
+	nf.nablaW = nf.cubicMatrix(zeroFunc())
+	nf.nablaB = nf.squareMatrix(zeroFunc())
 	nf.z = nf.squareMatrix(zeroFunc())
 	nf.activations = nf.squareMatrixFull(zeroFunc())
 }
@@ -105,16 +105,16 @@ func (nf *NetworkFormat) backPropAlgorithm(x, y []float64) ([][][]float64, [][]f
 
 	l := len(nf.Sizes) - 1 // last entry "layer-vise"
 
-	// 2. Forward feed
+	// 1. Forward feed
 	nf.forwardFeed(x, l)
 
-	// 3. Computing the output error (delta L).
+	// 2. Computing the output error (delta L).
 	nf.outputError(y, l)
 
-	// 4. Gradients at the output layer
+	// 3. Gradients at the output layer
 	nablaW[l-1], nablaB[l-1] = nf.outputGradients(nablaW, nablaB, l)
 
-	// 5. Backpropagating the error
+	// 4. Backpropagating the error
 	nablaW, nablaB = nf.backPropError(nablaW, nablaB, l)
 
 	return nablaW, nablaB
@@ -123,8 +123,6 @@ func (nf *NetworkFormat) backPropAlgorithm(x, y []float64) ([][][]float64, [][]f
 // updateMiniBatches runs the stochastic gradient descent
 // algorithm for a set of mini batches (e.g one epoch)
 func (nf *NetworkFormat) updateMiniBatches() {
-
-
 	deltaNablaW := nf.cubicMatrix(zeroFunc())
 	deltaNablaB := nf.squareMatrix(zeroFunc())
 
@@ -142,6 +140,7 @@ func (nf *NetworkFormat) updateMiniBatches() {
 		nf.updateBiases(nablaB)
 	}
 }
+
 
 func (nf *NetworkFormat) updateNablaB(deltaNablaB [][]float64,	nablaB [][]float64) [][]float64 {
 	for k := 0; k < len(nf.Sizes) - 1; k++ {
