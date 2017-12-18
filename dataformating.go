@@ -3,7 +3,7 @@ package network
 import (
 	"math/rand"
 	"time"
-	"github.com/gmkvaal/goNNtranslation/train/simpletest"
+	"github.com/gmkvaal/goNNtranslation/train/MNIST"
 )
 
 type data struct {
@@ -17,10 +17,10 @@ type data struct {
 }
 
 func (data *data) loadData() {
-	//d := &MNIST.Data{}
-	//d.FormatMNISTData()
-	d := simpletest.Data{}
-	d.InitTestSlices()
+	d := &MNIST.Data{}
+	d.FormatMNISTData()
+	//d := simpletest.Data{}
+	//d.InitTestSlices()
 	data.trainingInput = d.TrainingInput
 	data.trainingOutput = d.TrainingOutput
 	data.validationInput = d.ValidationInput

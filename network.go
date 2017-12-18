@@ -197,8 +197,8 @@ func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int
 
 		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
 		nf.updateMiniBatches()
-		//nf.validate(nf.data.validationInput, nf.data.validationOutput, 100)
-		nf.validate(nf.data.trainingInput, nf.data.trainingOutput, 4)
+		nf.validate(nf.data.validationInput, nf.data.validationOutput, 1000)
+		//nf.validate(nf.data.trainingInput, nf.data.trainingOutput, 100)
 
 		fmt.Println("Avg cost:", nf.totalCost(nf.data.validationInput[:dataCap], nf.data.validationInput[:dataCap]))
 		fmt.Println("")

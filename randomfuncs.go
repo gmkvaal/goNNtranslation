@@ -3,6 +3,7 @@ package network
 import (
 	"math/rand"
 	"time"
+	"math"
 )
 
 // randomFunc returns a func that
@@ -10,7 +11,7 @@ import (
 func randomFunc() func(int) float64 {
 	rand.Seed(time.Now().UnixNano())
 	return func(size int) float64 {
-		return float64(rand.Float64()) // math.Sqrt(float64(size))
+		return float64(rand.NormFloat64()) / math.Sqrt(float64(size))
 	}
 }
 
