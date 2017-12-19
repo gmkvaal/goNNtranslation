@@ -5,7 +5,8 @@ import (
 
 	//plr "github.com/gmkvaal/pythonlistreader"
 	"fmt"
-	)
+	"github.com/gonum/matrix/mat64"
+)
 
 /*
 // TestForwardFeed tests the forward feed algorithm
@@ -199,44 +200,60 @@ func vizNumber(s []float64) {
 func TestIt(t *testing.T) {
 	fmt.Println()
 	nf := NetworkFormat{Sizes: []int{2, 3, 1}}
-	nf.initNetwork()
+	nf.InitNetwork()
+	nf.InitNetworkMethods(OutputErrorXEntropy, SigmoidActivation)
 	nf.data.loadData()
 	nf.n = 4
 	nf.hp.eta = 0.5
 	nf.hp.lambda = 0.001
 
-	/*
-	w11 := []float64{-0.95766323, -2.83527046}
-	w12 := []float64{-4.68051798, -3.67367494}
-	w13 := []float64{-3.42136137, -3.66026809}
-	w21 := []float64{3.23952935,  9.16831414,  7.20927857}
 
-	nf.weights = [][][]float64{{w11, w12, w13}, {w21}}
+	w1 := mat64.NewDense(2,3, nil)
+	w1.Set(0, 0, -0.95766323)
+	w1.Set(1, 0, -2.83527046)
+	w1.Set(0, 1, -4.68051798)
+	w1.Set(1, 1, -3.67367494)
+	w1.Set(0, 2, -3.42136137)
+	w1.Set(1, 2, -3.66026809)
 
-	b11 := 1.47931576
-	b12 := 5.76116679
-	b13 := 4.77665241
-	b21 := -7.41086319
+	w2 := mat64.NewDense(3,1, nil)
+	w2.Set(0, 0,  3.23952935)
+	w2.Set(1, 0,  9.16831414)
+	w2.Set(2, 0,  7.20927857)
 
-	nf.biases = [][]float64{{b11, b12, b13}, {b21}}
-	*/
+
+	nf.weights = []*mat64.Dense{w1, w2}
+
+	b1 := mat64.NewDense(3, 1, nil)
+	b1.Set(0, 0, 1.47931576)
+	b1.Set(1, 0, 5.76116679)
+	b1.Set(2, 0, 4.77665241)
+
+	b2 := mat64.NewDense(1,1,nil)
+	b2.Set(0,0,-7.41086319)
+
+	nf.biases = []*mat64.Dense{b1, b2}
+
+	//fmt.Println(nf.weights[1].RawMatrix().Data)
+
 
 	//nf.miniBatchGenerator(0, 4, 1, true)
 
+	/*
 	for i := 0; i < 1000; i++ {
 		nf.miniBatchGenerator(0, 4, 1, false)
 		nf.updateMiniBatches()
 	}
-
-	var y []float64
-	y = nf.forwardFeed([]float64{0, 0}, 2)
-	fmt.Println(y, 1)
-	y = nf.forwardFeed([]float64{1, 0}, 2)
-	fmt.Println(y, 1)
-	y = nf.forwardFeed([]float64{0, 1}, 2)
-	fmt.Println(y, 1)
-	y = nf.forwardFeed([]float64{1, 1}, 2)
-	fmt.Println(y, 0)
+	*/
+	var y *mat64.Dense
+	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{0,0}))
+	fmt.Println(y.RawMatrix().Data)
+	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{1,0}))
+	fmt.Println(y.RawMatrix().Data)
+	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{0,1}))
+	fmt.Println(y.RawMatrix().Data)
+	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{1,1}))
+	fmt.Println(y.RawMatrix().Data)
 
 	fmt.Println()
 

@@ -1,6 +1,5 @@
 package network
 
-import "fmt"
 
 // argMax returns the index corresponding
 // to the largest entry in slice s
@@ -33,6 +32,7 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	}
 }
 
+/*
 func (nf NetworkFormat) validate(inputData, outputData [][]float64, dataCap int) {
 	var yes, no int
 
@@ -47,3 +47,4 @@ func (nf NetworkFormat) validate(inputData, outputData [][]float64, dataCap int)
 	fmt.Println("Hitrate:", 100*float64(yes)/float64(yes+no), "%")
 }
 
+*/

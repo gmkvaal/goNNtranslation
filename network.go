@@ -2,48 +2,105 @@ package network
 
 import (
 	"fmt"
+	"github.com/gonum/matrix/mat64"
 )
 
 // NetworkFormat contains the
 // fields Sizes, biases, and weights
 type NetworkFormat struct {
 	Sizes       []int
-	biases      [][]float64
-	weights     [][][]float64
-	delta       [][]float64
-	nablaW      [][][]float64
-	nablaB      [][]float64
-	z           [][]float64
-	activations [][]float64
-	l 			int
+	weights     []*mat64.Dense
+	biases      []*mat64.Dense
+	nablaW      []*mat64.Dense
+	nablaB      []*mat64.Dense
+	deltaNablaW []*mat64.Dense
+	deltaNablaB []*mat64.Dense
+	delta       []*mat64.Dense
+	z           []*mat64.Dense
+	activations []*mat64.Dense
+	sp          []*mat64.Dense
+	l           int
 	data
-	hp hyperParameters
+	NetworkMethods
+	hp HyperParameters
 }
 
-type hyperParameters struct {
-	eta float64
+type NetworkMethods struct {
+	activationFunc      func(i, j int, v float64) float64
+	activationFuncPrime func(i, j int, v float64) float64
+	outputError         func(delta *mat64.Dense, a, y mat64.Matrix)
+}
+
+type HyperParameters struct {
+	eta    float64
 	lambda float64
 }
 
 // initNetwork initiates the weights
 // and biases with random numbers
-func (nf *NetworkFormat) initNetwork() {
-	nf.weights = nf.cubicMatrix(randomFunc())
-	nf.biases = nf.squareMatrix(randomFunc())
-	nf.delta = nf.squareMatrix(zeroFunc())
-	nf.nablaW = nf.cubicMatrix(zeroFunc())
-	nf.nablaB = nf.squareMatrix(zeroFunc())
-	nf.z = nf.squareMatrix(zeroFunc())
-	nf.activations = nf.squareMatrixFull(zeroFunc())
+func (nf *NetworkFormat) InitNetwork() {
+	nf.weights = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], randomFunc())
+	nf.biases = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, randomFunc())
+	nf.nablaW = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], zeroFunc())
+	nf.nablaB = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.deltaNablaW = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], zeroFunc())
+	nf.deltaNablaB = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.delta = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.z = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.activations = SliceWithGonumDense(len(nf.Sizes[:]), nf.Sizes[:], 1, zeroFunc())
+	nf.sp = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
 	nf.l = len(nf.Sizes) - 1
+	fmt.Print()
+}
+
+func (nm *NetworkMethods) InitNetworkMethods(outputError func(delta *mat64.Dense, a, y mat64.Matrix),
+	activationFunc func(i, j int, v float64) float64,
+	activationFuncPrime func(i, j int, v float64) float64) {
+
+		nm.outputError = outputError
+		nm.activationFunc = activationFunc
+		nm.activationFuncPrime = activationFuncPrime
 }
 
 // setHyperParameters initiates the hyper parameters
-func (hp *hyperParameters) initHyperParameters(eta float64, lambda float64) {
+func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 	hp.eta = eta
 	hp.lambda = lambda
 }
 
+// forwardFeed computes the z-s and activations at every neuron and returns the output layer
+func (nf *NetworkFormat) ForwardFeedRapid(x *mat64.Dense) *mat64.Dense {
+	nf.activations[0] = x
+	for k := range nf.Sizes[1:] {
+		nf.z[k].Mul(nf.weights[k].T(), nf.activations[k])
+		nf.z[k].Add(nf.z[k], nf.biases[k])
+		nf.activations[k+1].Apply(nf.activationFunc, nf.z[k])
+	}
+
+	return nf.activations[nf.l]
+}
+
+// outputError computes the error at the output neurons
+func (nf *NetworkFormat) OutputErrorRapid(y mat64.Matrix) {
+	nf.outputError(nf.delta[nf.l-1], nf.activations[nf.l], y)
+}
+
+func (nf *NetworkFormat) OutputGradientsRapid() {
+	nf.deltaNablaB[nf.l-1].Clone(nf.delta[nf.l-1])
+	nf.deltaNablaW[nf.l-1].Mul(nf.activations[nf.l-1], nf.delta[nf.l-1].T())
+}
+
+func (nf *NetworkFormat) BackPropError() {
+	for k := 2; k < nf.l+1; k++ {
+		nf.sp[nf.l-k].Apply(nf.activationFuncPrime, nf.z[nf.l-k])
+		nf.delta[nf.l-k].Mul(nf.weights[nf.l+1-k], nf.delta[nf.l+1-k])
+		nf.delta[nf.l-k].MulElem(nf.delta[nf.l-k], nf.sp[nf.l-k])
+		nf.deltaNablaB[nf.l-k].Clone(nf.delta[nf.l-k])
+		nf.deltaNablaW[nf.l-k].Mul(nf.activations[nf.l-k], nf.delta[nf.l-k].T())
+	}
+}
+
+/*
 // forwardFeed updates all neurons for input x
 func (nf *NetworkFormat) forwardFeed(x []float64) []float64 {
 	nf.activations[0] = x
@@ -60,6 +117,8 @@ func (nf *NetworkFormat) forwardFeed(x []float64) []float64 {
 
 	return nf.activations[2]
 }
+
+
 
 // outputError computes the error at the output neurons
 func (nf *NetworkFormat) outputError(y []float64) {
@@ -167,3 +226,4 @@ func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int
 		fmt.Println("")
 	}
 }
+*/
