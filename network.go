@@ -28,7 +28,7 @@ type NetworkFormat struct {
 type NetworkMethods struct {
 	activationFunc      func(i, j int, v float64) float64
 	activationFuncPrime func(i, j int, v float64) float64
-	outputError         func(delta *mat64.Dense, a, y mat64.Matrix)
+	outputErrorFunc         func(delta *mat64.Dense, a, y mat64.Matrix)
 }
 
 type HyperParameters struct {
@@ -57,7 +57,7 @@ func (nm *NetworkMethods) InitNetworkMethods(outputError func(delta *mat64.Dense
 	activationFunc func(i, j int, v float64) float64,
 	activationFuncPrime func(i, j int, v float64) float64) {
 
-		nm.outputError = outputError
+		nm.outputErrorFunc = outputError
 		nm.activationFunc = activationFunc
 		nm.activationFuncPrime = activationFuncPrime
 }
@@ -69,8 +69,8 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 }
 
 // forwardFeed computes the z-s and activations at every neuron and returns the output layer
-func (nf *NetworkFormat) ForwardFeedRapid(x *mat64.Dense) *mat64.Dense {
-	nf.activations[0] = x
+func (nf *NetworkFormat) forwardFeed(x mat64.Matrix) *mat64.Dense {
+	nf.activations[0].Clone(x)
 	for k := range nf.Sizes[1:] {
 		nf.z[k].Mul(nf.weights[k].T(), nf.activations[k])
 		nf.z[k].Add(nf.z[k], nf.biases[k])
@@ -81,16 +81,16 @@ func (nf *NetworkFormat) ForwardFeedRapid(x *mat64.Dense) *mat64.Dense {
 }
 
 // outputError computes the error at the output neurons
-func (nf *NetworkFormat) OutputErrorRapid(y mat64.Matrix) {
-	nf.outputError(nf.delta[nf.l-1], nf.activations[nf.l], y)
+func (nf *NetworkFormat) outputError(y mat64.Matrix) {
+	nf.outputErrorFunc(nf.delta[nf.l-1], nf.activations[nf.l], y)
 }
 
-func (nf *NetworkFormat) OutputGradientsRapid() {
+func (nf *NetworkFormat) outputGradients() {
 	nf.deltaNablaB[nf.l-1].Clone(nf.delta[nf.l-1])
 	nf.deltaNablaW[nf.l-1].Mul(nf.activations[nf.l-1], nf.delta[nf.l-1].T())
 }
 
-func (nf *NetworkFormat) BackPropError() {
+func (nf *NetworkFormat) backPropError() {
 	for k := 2; k < nf.l+1; k++ {
 		nf.sp[nf.l-k].Apply(nf.activationFuncPrime, nf.z[nf.l-k])
 		nf.delta[nf.l-k].Mul(nf.weights[nf.l+1-k], nf.delta[nf.l+1-k])
@@ -100,63 +100,9 @@ func (nf *NetworkFormat) BackPropError() {
 	}
 }
 
-/*
-// forwardFeed updates all neurons for input x
-func (nf *NetworkFormat) forwardFeed(x []float64) []float64 {
-	nf.activations[0] = x
-	for k := 0; k < nf.l; k++ {
-		for j := 0; j < nf.Sizes[k+1]; j++ {
-			sum := 0.0
-			for i := 0; i < nf.Sizes[k]; i++ {
-				sum += nf.activations[k][i] * nf.weights[k][j][i]
-			}
-			nf.z[k][j] = sum + nf.biases[k][j]
-			nf.activations[k+1][j] = sigmoid(nf.z[k][j])
-		}
-	}
-
-	return nf.activations[2]
-}
-
-
-
-// outputError computes the error at the output neurons
-func (nf *NetworkFormat) outputError(y []float64) {
-	for j := 0; j < nf.Sizes[nf.l]; j++ {
-		nf.delta[nf.l-1][j] = outputNeuronError(nf.z[nf.l-1][j], nf.activations[nf.l][j], y[j])
-	}
-}
-
-func (nf *NetworkFormat) outputGradients()  {
-	for j := 0; j < nf.Sizes[nf.l]; j++ {
-		nf.nablaB[nf.l-1][j] += nf.delta[nf.l-1][j]
-		for i := 0; i < nf.Sizes[nf.l-1]; i++ {
-			nf.nablaW[nf.l-1][j][i] += nf.delta[nf.l-1][j]*nf.activations[nf.l-1][i]
-		}
-	}
-}
-
-// backPropError backpropagates the error through the hidden layers
-func (nf *NetworkFormat) backPropError() {
-	for k := 2; k < nf.l+1; k++ {
-		for j := 0; j < nf.Sizes[nf.l+1-k]; j++ {
-			nf.delta[nf.l-k][j] = 0
-			for i := 0; i < nf.Sizes[nf.l+2-k]; i++ {
-				nf.delta[nf.l-k][j] += nf.weights[nf.l+1-k][i][j] * nf.delta[nf.l+1-k][i] *
-					sigmoidPrime(nf.z[nf.l-k][j])
-			}
-			nf.nablaB[nf.l-k][j] +=  nf.delta[nf.l-k][j]
-
-			for i := 0; i < nf.Sizes[nf.l-k]; i++ {
-				nf.nablaW[nf.l-k][j][i] += nf.delta[nf.l-k][j] * nf.activations[nf.l-k][i]
-			}
-		}
-	}
-}
-
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (nf *NetworkFormat) backPropAlgorithm(x, y []float64) {
+func (nf *NetworkFormat) BackPropAlgorithm(x, y *mat64.Dense) {
 
 	// 1. Forward feed
 	nf.forwardFeed(x)
@@ -171,6 +117,25 @@ func (nf *NetworkFormat) backPropAlgorithm(x, y []float64) {
 	nf.backPropError()
 }
 
+
+// updateMiniBatches runs the stochastic gradient descent
+// algorithm for a set of mini batches (e.g one epoch)
+func (nf *NetworkFormat) updateMiniBatches() {
+	for i := range nf.data.miniBatches {
+		for _, dataSet := range nf.data.miniBatches[i] {
+			nf.BackPropAlgorithm(dataSet[0], dataSet[1])
+
+		}
+
+		//nf.updateWeights()
+		//nf.updateBiases()
+	}
+}
+
+
+
+
+/*
 // updateWeights updates the weight matrix following a mini batch
 func (nf *NetworkFormat) updateWeights() {
 	for k := 0; k < len(nf.Sizes) - 1; k++ {
@@ -192,21 +157,6 @@ func (nf *NetworkFormat) updateBiases() {
 	}
 }
 
-// updateMiniBatches runs the stochastic gradient descent
-// algorithm for a set of mini batches (e.g one epoch)
-func (nf *NetworkFormat) updateMiniBatches() {
-	for i := range nf.data.miniBatches {
-		nf.nablaW = nf.cubicMatrix(zeroFunc())
-		nf.nablaB = nf.squareMatrix(zeroFunc())
-
-		for _, dataSet := range nf.data.miniBatches[i] {
-			nf.backPropAlgorithm(dataSet[0], dataSet[1])
-		}
-
-		nf.updateWeights()
-		nf.updateBiases()
-	}
-}
 
 // trainNetwork trains the network with the parameters given as arguments
 func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
