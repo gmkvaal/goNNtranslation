@@ -118,51 +118,59 @@ func (nf *NetworkFormat) BackPropAlgorithm(x, y *mat64.Dense) {
 }
 
 
+func (nf *NetworkFormat) updateGradients() {
+	for k := range nf.Sizes[1:] {
+		nf.nablaW[k].Add(nf.nablaW[k], nf.deltaNablaW[k])
+		nf.nablaB[k].Add(nf.nablaB[k], nf.deltaNablaB[k])
+	}
+}
+
+
 // updateMiniBatches runs the stochastic gradient descent
 // algorithm for a set of mini batches (e.g one epoch)
 func (nf *NetworkFormat) updateMiniBatches() {
 	for i := range nf.data.miniBatches {
 		for _, dataSet := range nf.data.miniBatches[i] {
 			nf.BackPropAlgorithm(dataSet[0], dataSet[1])
-
+			nf.updateGradients()
 		}
 
-		//nf.updateWeights()
-		//nf.updateBiases()
+		nf.updateWeightsAndBiases()
+	}
+}
+
+func (nf *NetworkFormat) updateWeightAtLayer(k int) {
+	nf.weights[k].Scale(1 - nf.hp.eta*(nf.hp.lambda/nf.data.n), nf.weights[k])
+	nf.nablaW[k].Scale(nf.hp.eta/nf.data.miniBatchSize, nf.nablaW[k])
+	nf.weights[k].Sub(nf.weights[k], nf.nablaW[k])
+}
+
+func (nf *NetworkFormat) updateBiasesAtLayer(k int) {
+	nf.nablaB[k].Scale(nf.hp.eta/nf.data.miniBatchSize, nf.nablaB[k])
+	nf.biases[k].Sub(nf.biases[k], nf.nablaB[k])
+}
+
+func (nf *NetworkFormat) clearWeightAndBiasGradientsAtLayer(k int) {
+	nf.nablaW[k].Scale(0, nf.nablaW[k])
+	nf.nablaB[k].Scale(0, nf.nablaB[k])
+}
+
+func (nf *NetworkFormat) updateWeightsAndBiases() {
+	for k := range nf.Sizes[1:] {
+		nf.updateWeightAtLayer(k)
+		nf.updateBiasesAtLayer(k)
+		nf.clearWeightAndBiasGradientsAtLayer(k)
 	}
 }
 
 
-
-
-/*
-// updateWeights updates the weight matrix following a mini batch
-func (nf *NetworkFormat) updateWeights() {
-	for k := 0; k < len(nf.Sizes) - 1; k++ {
-		for j := 0; j < nf.Sizes[k+1]; j++ {
-			for i := 0; i < nf.Sizes[k]; i++ {
-				nf.weights[k][j][i] = (1 - nf.hp.eta*(nf.hp.lambda/nf.data.n))*nf.weights[k][j][i] -
-					nf.hp.eta/nf.data.miniBatchSize * nf.nablaW[k][j][i]
-			}
-		}
-	}
-}
-
-// updateBiases updates the bias matrix following a mini batch
-func (nf *NetworkFormat) updateBiases() {
-	for k := 0; k < len(nf.Sizes) - 1; k++ {
-		for j := 0; j < nf.Sizes[k+1]; j++ {
-			nf.biases[k][j] = nf.biases[k][j] - nf.hp.eta/nf.data.miniBatchSize*nf.nablaB[k][j]
-		}
-	}
-}
 
 
 // trainNetwork trains the network with the parameters given as arguments
 func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
-	nf.initNetwork()
-	nf.data.loadData()
-	nf.hp.initHyperParameters(eta, lambda)
+	nf.InitNetwork()
+	nf.data.LoadData()
+	nf.hp.InitHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {
 		fmt.Println("Epoch", i, ":")
@@ -170,10 +178,9 @@ func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int
 		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
 		nf.updateMiniBatches()
 		nf.validate(nf.data.validationInput, nf.data.validationOutput, 1000)
-		//nf.validate(nf.data.trainingInput, nf.data.trainingOutput, 100)
 
-		fmt.Println("Avg cost:", nf.totalCost(nf.data.validationInput[:dataCap], nf.data.validationInput[:dataCap]))
+		//fmt.Println("Avg cost:", nf.totalCost(nf.data.validationInput[:dataCap], nf.data.validationInput[:dataCap]))
 		fmt.Println("")
 	}
 }
-*/
+

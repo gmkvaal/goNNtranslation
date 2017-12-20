@@ -202,7 +202,7 @@ func TestIt(t *testing.T) {
 	nf := NetworkFormat{Sizes: []int{2, 3, 1}}
 	nf.InitNetwork()
 	nf.InitNetworkMethods(OutputErrorXEntropy, SigmoidActivation)
-	nf.data.loadData()
+	nf.data.LoadData()
 	nf.n = 4
 	nf.hp.eta = 0.5
 	nf.hp.lambda = 0.001
@@ -246,13 +246,13 @@ func TestIt(t *testing.T) {
 	}
 	*/
 	var y *mat64.Dense
-	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{0,0}))
+	y = nf.forwardFeed(mat64.NewDense(2,1, []float64{0,0}))
 	fmt.Println(y.RawMatrix().Data)
-	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{1,0}))
+	y = nf.forwardFeed(mat64.NewDense(2,1, []float64{1,0}))
 	fmt.Println(y.RawMatrix().Data)
-	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{0,1}))
+	y = nf.forwardFeed(mat64.NewDense(2,1, []float64{0,1}))
 	fmt.Println(y.RawMatrix().Data)
-	y = nf.ForwardFeedRapid(mat64.NewDense(2,1, []float64{1,1}))
+	y = nf.forwardFeed(mat64.NewDense(2,1, []float64{1,1}))
 	fmt.Println(y.RawMatrix().Data)
 
 	fmt.Println()
