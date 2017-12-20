@@ -5,10 +5,20 @@ import (
 	"github.com/gonum/matrix/mat64"
 )
 
+
+
 // NetworkFormat contains the
 // fields Sizes, biases, and weights
 type NetworkFormat struct {
 	Sizes       []int
+	l           int
+	hp          HyperParameters
+	data
+	NetworkMethods
+	dataContainers
+}
+
+type dataContainers struct {
 	weights     []*mat64.Dense
 	biases      []*mat64.Dense
 	nablaW      []*mat64.Dense
@@ -19,10 +29,6 @@ type NetworkFormat struct {
 	z           []*mat64.Dense
 	activations []*mat64.Dense
 	sp          []*mat64.Dense
-	l           int
-	hp          HyperParameters
-	data
-	NetworkMethods
 }
 
 type NetworkMethods struct {
