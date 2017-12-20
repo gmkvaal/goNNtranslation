@@ -14,7 +14,12 @@ func main() {
 
 
 
-	nf := NN.NetworkFormat{Sizes: []int{784, 30, 10}}
-	nf.InitNetworkMethods(NN.OutputErrorXEntropy, NN.SigmoidActivation, NN.SigmoidActivationPrime)
-	nf.TrainNetwork(6000, 30, 10, 0.5, 5, true)
+	n := NN.Network{}
+	n.AddLayer(784, NN.Sigmoid, NN.SigmoidPrime)
+	n.AddLayer(30, NN.Sigmoid, NN.SigmoidPrime)
+	n.AddLayer(10, NN.Sigmoid, NN.SigmoidPrime)
+
+	n.InitNetworkMethods(NN.OutputErrorXEntropy)
+
+	n.TrainNetwork(1000, 30, 10, 0.5, 5, true)
 }

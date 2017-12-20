@@ -37,7 +37,7 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 }
 
 
-func (nf NetworkFormat) validate(inputData, outputData []*mat64.Dense, dataCap int) {
+func (nf Network) validate(inputData, outputData []*mat64.Dense, dataCap int) {
 	var yes, no int
 
 	for i := range outputData[:dataCap] {
