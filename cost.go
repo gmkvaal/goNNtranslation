@@ -1,5 +1,7 @@
 package network
 
+
+/*
 import "math"
 
 func xEntropyCost(a, y []float64) float64 {
@@ -43,5 +45,5 @@ func (nf NetworkFormat) totalCost(inputData, outputData [][]float64) float64 {
 	return cost
 }
 
-
+*/
 

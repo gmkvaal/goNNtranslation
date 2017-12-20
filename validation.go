@@ -1,6 +1,9 @@
 package network
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gonum/matrix/mat64"
+)
 
 // argMax returns the index corresponding
 // to the largest entry in slice s
@@ -33,11 +36,13 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	}
 }
 
-func (nf NetworkFormat) validate(inputData, outputData [][]float64, dataCap int) {
+
+func (nf NetworkFormat) validate(inputData, outputData []*mat64.Dense, dataCap int) {
 	var yes, no int
 
 	for i := range outputData[:dataCap] {
-		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i]), outputData[:dataCap][i]) == 1 {
+		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i]).RawMatrix().Data,
+			outputData[:dataCap][i].RawMatrix().Data) == 1 {
 			yes += 1
 		} else {
 			no += 1

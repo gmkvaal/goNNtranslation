@@ -1,30 +1,41 @@
 package network
 
 import (
+	"github.com/gmkvaal/goNNtranslation/train/MNIST"
+	"github.com/gonum/matrix/mat64"
 	"math/rand"
 	"time"
-	"github.com/gmkvaal/goNNtranslation/train/MNIST"
 )
 
 type data struct {
-	trainingInput [][]float64
-	trainingOutput [][]float64
-	validationInput [][]float64
-	validationOutput [][]float64
-	miniBatches [][][][]float64
-	n float64
-	miniBatchSize float64
+	trainingInput    []*mat64.Dense
+	trainingOutput   []*mat64.Dense
+	validationInput  []*mat64.Dense
+	validationOutput []*mat64.Dense
+	miniBatches      [][][]*mat64.Dense
+	n                float64
+	miniBatchSize    float64
 }
 
-func (data *data) loadData() {
+func (data *data) LoadData() {
 	d := &MNIST.Data{}
 	d.FormatMNISTData()
 	//d := simpletest.Data{}
 	//d.InitTestSlices()
-	data.trainingInput = d.TrainingInput
-	data.trainingOutput = d.TrainingOutput
-	data.validationInput = d.ValidationInput
-	data.validationOutput = d.ValidationOutput
+	for idx := range d.TrainingInput {
+		data.trainingInput = append(data.trainingInput,
+			mat64.NewDense(len(d.TrainingInput[idx]), 1, d.TrainingInput[idx]))
+		data.trainingOutput = append(data.trainingOutput,
+			mat64.NewDense(len(d.TrainingOutput[idx]), 1, d.TrainingOutput[idx]))
+	}
+
+	for idx := range d.ValidationOutput {
+		data.validationInput = append(data.trainingInput,
+			mat64.NewDense(len(d.ValidationInput[idx]), 1, d.ValidationInput[idx]))
+		data.validationOutput = append(data.trainingOutput,
+			mat64.NewDense(len(d.ValidationOutput[idx]), 1, d.ValidationOutput[idx]))
+	}
+
 }
 
 // initSizes initiates the fields containing the size and length of the training set and mini batch
@@ -59,6 +70,7 @@ func (data *data) shuffleAllData() {
 	data.shuffleValidationData()
 }
 
+
 // miniBatchGenerator generates a new set of miniBatches from the training data.
 // miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
@@ -71,20 +83,16 @@ func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int, shuf
 	}
 
 	trainingSetLength := len(data.trainingInput[dataStart:dataCap])
-	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
-	data.miniBatches = make([][][][]float64, numberOfMiniBatches, numberOfMiniBatches)
+	numberOfMiniBatches := int(trainingSetLength / miniBatchSize)
+	data.miniBatches = make([][][]*mat64.Dense, numberOfMiniBatches, numberOfMiniBatches)
 	data.initSizes(trainingSetLength, miniBatchSize)
 
 	for i := 0; i < numberOfMiniBatches; i++ {
-		data.miniBatches[i] = make([][][]float64, miniBatchSize, miniBatchSize)
+		data.miniBatches[i] = make([][]*mat64.Dense, miniBatchSize, miniBatchSize)
 		for j := 0; j < miniBatchSize; j++ {
-			data.miniBatches[i][j] = [][]float64{data.trainingInput[i*miniBatchSize + j],
-				data.trainingOutput[i*miniBatchSize + j]}
+			data.miniBatches[i][j] = []*mat64.Dense{data.trainingInput[i*miniBatchSize+j],
+				data.trainingOutput[i*miniBatchSize+j]}
 		}
 	}
 }
-
-
-
-
 
