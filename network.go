@@ -199,18 +199,17 @@ func (nf *Network) updateMiniBatches() {
 }
 
 // trainNetwork trains the network with the parameters given as arguments
-func (nf *Network) TrainNetwork(dataCap int, epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
+func (nf *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
 
 	nf.initDataContainers()
-	nf.data.LoadData()
 	nf.hp.InitHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {
 		fmt.Println("Epoch", i, ":")
 
-		nf.data.miniBatchGenerator(0, dataCap, miniBatchSize, shuffle)
+		nf.data.miniBatchGenerator(miniBatchSize, shuffle)
 		nf.updateMiniBatches()
-		nf.validate(nf.data.validationInput, nf.data.validationOutput, 1000)
+		nf.validate(nf.data.validationInput, nf.data.validationOutput)
 
 		//fmt.Println("Avg cost:", nf.totalCost(nf.data.validationInput[:dataCap], nf.data.validationInput[:dataCap]))
 		fmt.Println("")

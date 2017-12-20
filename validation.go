@@ -37,12 +37,12 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 }
 
 
-func (nf Network) validate(inputData, outputData []*mat64.Dense, dataCap int) {
+func (nf Network) validate(inputData, outputData []*mat64.Dense) {
 	var yes, no int
 
-	for i := range outputData[:dataCap] {
-		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i]).RawMatrix().Data,
-			outputData[:dataCap][i].RawMatrix().Data) == 1 {
+	for i := range inputData {
+		if checkIfEqual(nf.forwardFeed(inputData[i]).RawMatrix().Data,
+			outputData[i].RawMatrix().Data) == 1 {
 			yes += 1
 		} else {
 			no += 1

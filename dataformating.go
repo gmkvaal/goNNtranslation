@@ -1,7 +1,6 @@
 package network
 
 import (
-	"github.com/gmkvaal/goNNtranslation/train/MNIST"
 	"github.com/gonum/matrix/mat64"
 	"math/rand"
 	"time"
@@ -17,25 +16,22 @@ type data struct {
 	miniBatchSize    float64
 }
 
-func (data *data) LoadData() {
-	d := &MNIST.Data{}
-	d.FormatMNISTData()
-	//d := simpletest.Data{}
-	//d.InitTestSlices()
-	for idx := range d.TrainingInput {
+func (data *data) LoadTrainingData(trainingInput, trainingOutput [][]float64) {
+	for idx := range trainingInput {
 		data.trainingInput = append(data.trainingInput,
-			mat64.NewDense(len(d.TrainingInput[idx]), 1, d.TrainingInput[idx]))
+			mat64.NewDense(len(trainingInput[idx]), 1, trainingInput[idx]))
 		data.trainingOutput = append(data.trainingOutput,
-			mat64.NewDense(len(d.TrainingOutput[idx]), 1, d.TrainingOutput[idx]))
+			mat64.NewDense(len(trainingOutput[idx]), 1, trainingOutput[idx]))
 	}
+}
 
-	for idx := range d.ValidationOutput {
-		data.validationInput = append(data.trainingInput,
-			mat64.NewDense(len(d.ValidationInput[idx]), 1, d.ValidationInput[idx]))
-		data.validationOutput = append(data.trainingOutput,
-			mat64.NewDense(len(d.ValidationOutput[idx]), 1, d.ValidationOutput[idx]))
+func (data *data) LoadValidationData(validationInput, validationOutput [][]float64) {
+	for idx := range validationInput {
+		data.validationInput = append(data.validationInput,
+			mat64.NewDense(len(validationInput[idx]), 1, validationInput[idx]))
+		data.validationOutput = append(data.validationOutput,
+			mat64.NewDense(len(validationOutput[idx]), 1, validationOutput[idx]))
 	}
-
 }
 
 // initSizes initiates the fields containing the size and length of the training set and mini batch
@@ -74,15 +70,13 @@ func (data *data) shuffleAllData() {
 // miniBatchGenerator generates a new set of miniBatches from the training data.
 // miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
-func (data *data) miniBatchGenerator(dataStart, dataCap, miniBatchSize int, shuffle bool) {
-
-	dataStart = 0 // not yet implemented
+func (data *data) miniBatchGenerator(miniBatchSize int, shuffle bool) {
 
 	if shuffle {
 		data.shuffleAllData()
 	}
 
-	trainingSetLength := len(data.trainingInput[dataStart:dataCap])
+	trainingSetLength := len(data.trainingInput)
 	numberOfMiniBatches := int(trainingSetLength / miniBatchSize)
 	data.miniBatches = make([][][]*mat64.Dense, numberOfMiniBatches, numberOfMiniBatches)
 	data.initSizes(trainingSetLength, miniBatchSize)
