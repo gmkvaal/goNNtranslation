@@ -20,15 +20,15 @@ type NetworkFormat struct {
 	activations []*mat64.Dense
 	sp          []*mat64.Dense
 	l           int
+	hp          HyperParameters
 	data
 	NetworkMethods
-	hp HyperParameters
 }
 
 type NetworkMethods struct {
 	activationFunc      func(i, j int, v float64) float64
 	activationFuncPrime func(i, j int, v float64) float64
-	outputErrorFunc         func(delta *mat64.Dense, a, y mat64.Matrix)
+	outputErrorFunc     func(delta *mat64.Dense, a, y mat64.Matrix)
 }
 
 type HyperParameters struct {
@@ -39,27 +39,27 @@ type HyperParameters struct {
 // initNetwork initiates the weights
 // and biases with random numbers
 func (nf *NetworkFormat) InitNetwork() {
-	nf.weights = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], randomFunc())
-	nf.biases = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, randomFunc())
-	nf.nablaW = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], zeroFunc())
-	nf.nablaB = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
-	nf.deltaNablaW = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], zeroFunc())
-	nf.deltaNablaB = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
-	nf.delta = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
-	nf.z = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
-	nf.activations = SliceWithGonumDense(len(nf.Sizes[:]), nf.Sizes[:], 1, zeroFunc())
-	nf.sp = SliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
-	nf.l = len(nf.Sizes) - 1
-	fmt.Print()
+	nf.weights 		= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], randomFunc())
+	nf.biases 		= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, randomFunc())
+	nf.nablaW 		= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], zeroFunc())
+	nf.nablaB 		= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.deltaNablaW	= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[:], nf.Sizes[1:], zeroFunc())
+	nf.deltaNablaB 	= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.delta 		= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.z 			= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.activations 	= sliceWithGonumDense(len(nf.Sizes[:]), nf.Sizes[:], 1, zeroFunc())
+	nf.sp 			= sliceWithGonumDense(len(nf.Sizes[1:]), nf.Sizes[1:], 1, zeroFunc())
+	nf.l 			= len(nf.Sizes) - 1
 }
 
-func (nm *NetworkMethods) InitNetworkMethods(outputError func(delta *mat64.Dense, a, y mat64.Matrix),
+func (nm *NetworkMethods) InitNetworkMethods(
+	outputError func(delta *mat64.Dense, a, y mat64.Matrix),
 	activationFunc func(i, j int, v float64) float64,
 	activationFuncPrime func(i, j int, v float64) float64) {
 
-		nm.outputErrorFunc = outputError
-		nm.activationFunc = activationFunc
-		nm.activationFuncPrime = activationFuncPrime
+	nm.outputErrorFunc = outputError
+	nm.activationFunc = activationFunc
+	nm.activationFuncPrime = activationFuncPrime
 }
 
 // setHyperParameters initiates the hyper parameters
@@ -85,11 +85,14 @@ func (nf *NetworkFormat) outputError(y mat64.Matrix) {
 	nf.outputErrorFunc(nf.delta[nf.l-1], nf.activations[nf.l], y)
 }
 
+// outputGradients computes the (delta) gradients at the output layer
 func (nf *NetworkFormat) outputGradients() {
 	nf.deltaNablaB[nf.l-1].Clone(nf.delta[nf.l-1])
 	nf.deltaNablaW[nf.l-1].Mul(nf.activations[nf.l-1], nf.delta[nf.l-1].T())
 }
 
+// backPropError backpropagates the error and computes the (delta) gradients
+// at every layer
 func (nf *NetworkFormat) backPropError() {
 	for k := 2; k < nf.l+1; k++ {
 		nf.sp[nf.l-k].Apply(nf.activationFuncPrime, nf.z[nf.l-k])
@@ -117,7 +120,7 @@ func (nf *NetworkFormat) BackPropAlgorithm(x, y *mat64.Dense) {
 	nf.backPropError()
 }
 
-
+// updateGradients adds the delta gradient matrices to the gradient matrices
 func (nf *NetworkFormat) updateGradients() {
 	for k := range nf.Sizes[1:] {
 		nf.nablaW[k].Add(nf.nablaW[k], nf.deltaNablaW[k])
@@ -125,6 +128,34 @@ func (nf *NetworkFormat) updateGradients() {
 	}
 }
 
+// updateWeightsAtLayer updates the weights at a given layer of the network
+func (nf *NetworkFormat) updateWeightAtLayer(k int) {
+	nf.weights[k].Scale(1-nf.hp.eta*(nf.hp.lambda/nf.data.n), nf.weights[k])
+	nf.nablaW[k].Scale(nf.hp.eta/nf.data.miniBatchSize, nf.nablaW[k])
+	nf.weights[k].Sub(nf.weights[k], nf.nablaW[k])
+}
+
+// updateWeightsAtLayer updates the biases at a given layer of the network
+func (nf *NetworkFormat) updateBiasesAtLayer(k int) {
+	nf.nablaB[k].Scale(nf.hp.eta/nf.data.miniBatchSize, nf.nablaB[k])
+	nf.biases[k].Sub(nf.biases[k], nf.nablaB[k])
+}
+
+// clearGradientsAtLayer sets the weight and bias gradients to zero
+func (nf *NetworkFormat) clearGradientsAtLayer(k int) {
+	nf.nablaW[k].Scale(0, nf.nablaW[k])
+	nf.nablaB[k].Scale(0, nf.nablaB[k])
+}
+
+// updateWeightsAndBiases updates the weights and biases
+// at every layer of the network
+func (nf *NetworkFormat) updateWeightsAndBiases() {
+	for k := range nf.Sizes[1:] {
+		nf.updateWeightAtLayer(k)
+		nf.updateBiasesAtLayer(k)
+		nf.clearGradientsAtLayer(k)
+	}
+}
 
 // updateMiniBatches runs the stochastic gradient descent
 // algorithm for a set of mini batches (e.g one epoch)
@@ -138,33 +169,6 @@ func (nf *NetworkFormat) updateMiniBatches() {
 		nf.updateWeightsAndBiases()
 	}
 }
-
-func (nf *NetworkFormat) updateWeightAtLayer(k int) {
-	nf.weights[k].Scale(1 - nf.hp.eta*(nf.hp.lambda/nf.data.n), nf.weights[k])
-	nf.nablaW[k].Scale(nf.hp.eta/nf.data.miniBatchSize, nf.nablaW[k])
-	nf.weights[k].Sub(nf.weights[k], nf.nablaW[k])
-}
-
-func (nf *NetworkFormat) updateBiasesAtLayer(k int) {
-	nf.nablaB[k].Scale(nf.hp.eta/nf.data.miniBatchSize, nf.nablaB[k])
-	nf.biases[k].Sub(nf.biases[k], nf.nablaB[k])
-}
-
-func (nf *NetworkFormat) clearWeightAndBiasGradientsAtLayer(k int) {
-	nf.nablaW[k].Scale(0, nf.nablaW[k])
-	nf.nablaB[k].Scale(0, nf.nablaB[k])
-}
-
-func (nf *NetworkFormat) updateWeightsAndBiases() {
-	for k := range nf.Sizes[1:] {
-		nf.updateWeightAtLayer(k)
-		nf.updateBiasesAtLayer(k)
-		nf.clearWeightAndBiasGradientsAtLayer(k)
-	}
-}
-
-
-
 
 // trainNetwork trains the network with the parameters given as arguments
 func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
@@ -183,4 +187,3 @@ func (nf *NetworkFormat) TrainNetwork(dataCap int, epochs int, miniBatchSize int
 		fmt.Println("")
 	}
 }
-
