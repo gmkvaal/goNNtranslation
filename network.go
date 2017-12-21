@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"github.com/gonum/matrix/mat64"
+	"log"
 )
 
 
@@ -99,7 +100,6 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 func (nf *Network) forwardFeed(x mat64.Matrix) *mat64.Dense {
 	nf.activations[0].Clone(x)
 	for k := range nf.Sizes[1:] {
-
 		nf.z[k].Mul(nf.weights[k].T(), nf.activations[k])
 		nf.z[k].Add(nf.z[k], nf.biases[k])
 		nf.activations[k+1].Apply(nf.layers[k].activationFunction.function, nf.z[k])
@@ -199,7 +199,17 @@ func (nf *Network) updateMiniBatches() {
 }
 
 // trainNetwork trains the network with the parameters given as arguments
-func (nf *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle bool) {
+func (nf *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool) {
+
+	if len(nf.trainingInput) == 0 || len(nf.trainingOutput) == 0 {
+		log.Fatal("Insufficient training data submitted")
+	}
+
+	if validate {
+		if len(nf.validationInput) == 0 || len(nf.validationOutput) == 0 {
+			log.Fatal("Insufficient validation data submitted")
+		}
+	}
 
 	nf.initDataContainers()
 	nf.hp.InitHyperParameters(eta, lambda)
@@ -209,7 +219,11 @@ func (nf *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float
 
 		nf.data.miniBatchGenerator(miniBatchSize, shuffle)
 		nf.updateMiniBatches()
-		nf.validate(nf.data.validationInput, nf.data.validationOutput)
+
+		if validate {
+			nf.validate(nf.data.validationInput, nf.data.validationOutput)
+		}
+
 
 		//fmt.Println("Avg cost:", nf.totalCost(nf.data.validationInput[:dataCap], nf.data.validationInput[:dataCap]))
 		fmt.Println("")

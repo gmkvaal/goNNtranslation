@@ -29,4 +29,3 @@ func SigmoidPrime(i, j int, v float64) float64 {
 func sigmoidPrime(z float64) float64 {
 	return sigmoid(z) * (1 - sigmoid(z))
 }
-
