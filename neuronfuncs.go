@@ -2,15 +2,8 @@ package network
 
 import (
 	"math"
-	"github.com/gonum/matrix/mat64"
 )
 
-
-// OutputErrorXEntropy computes `delta` at the output layer
-// for output activations `a` and output matrix `y`
-func OutputErrorXEntropy(delta *mat64.Dense, a, y mat64.Matrix) {
-	delta.Sub(a, y)
-}
 
 
 // sigmoid returns the sigmoid function

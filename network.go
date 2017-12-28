@@ -6,8 +6,10 @@ import (
 	"time"
 	"runtime"
 	"regexp"
+	"sync"
 )
 
+var wg sync.WaitGroup
 
 
 // Network contains the
@@ -99,14 +101,16 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 func (n *Network) forwardFeed(x []float64) []float64 {
 	n.activations[0] = x
 	for k := 0; k < n.l; k++ {
-		for j := 0; j < n.Sizes[k+1]; j++ {
-			sum := 0.0
-			for i := 0; i < n.Sizes[k]; i++ {
-				sum += n.activations[k][i] * n.weights[k][j][i]
-			}
-			n.z[k][j] = sum + n.biases[k][j]
-			n.activations[k+1][j] = n.layer.function(n.z[k][j])
+		go func(k int) {
+			for j := 0; j < n.Sizes[k+1]; j++ {
+				sum := 0.0
+				for i := 0; i < n.Sizes[k]; i++ {
+					sum += n.activations[k][i] * n.weights[k][j][i]
+				}
+				n.z[k][j] = sum + n.biases[k][j]
+				n.activations[k+1][j] = n.layer.function(n.z[k][j])
 		}
+		}(k)
 	}
 
 	return n.activations[n.l]
@@ -172,6 +176,7 @@ func (n *Network) updateWeights() {
 				n.weights[k][j][i] = (1 - n.hp.eta*(n.hp.lambda/n.data.n))*n.weights[k][j][i] -
 					n.hp.eta/n.data.miniBatchSize * n.nablaW[k][j][i]
 
+				// Resetting gradients to zero
 				n.nablaW[k][j][i] = 0
 			}
 		}
@@ -184,6 +189,7 @@ func (n *Network) updateBiases() {
 		for j := 0; j < n.Sizes[k+1]; j++ {
 			n.biases[k][j] = n.biases[k][j] - n.hp.eta/n.data.miniBatchSize*n.nablaB[k][j]
 
+			// Resetting gradients to zero
 			n.nablaB[k][j] = 0
 		}
 	}
