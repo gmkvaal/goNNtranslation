@@ -118,7 +118,7 @@ func (n *Network) forwardFeed(x []float64) []float64 {
 // outputError computes the error at the output neurons
 func (n *Network) outputError(y []float64) {
 	for j := 0; j < n.Sizes[n.l]; j++ {
-		n.delta[n.l-1][j] = outputNeuronError(n.z[n.l-1][j], n.activations[n.l][j], y[j])
+		n.delta[n.l-1][j] = n.outputErrorFunc(n.z[n.l-1][j], n.activations[n.l][j], y[j])
 	}
 }
 
