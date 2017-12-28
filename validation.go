@@ -3,7 +3,6 @@ package network
 import (
 	"fmt"
 	"github.com/gonum/matrix/mat64"
-	"time"
 )
 
 // argMax returns the index corresponding
@@ -39,9 +38,6 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 
 func ValidateArgMaxSlice(n *Network, inputData, outputData []*mat64.Dense) bool {
 	var yes, no int
-
-	defer TimeTrack(time.Now())
-
 
 	for i := range inputData {
 		if checkIfEqual(n.forwardFeed(inputData[i]).RawMatrix().Data, outputData[i].RawMatrix().Data) == 1 {

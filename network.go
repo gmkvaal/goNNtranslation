@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"github.com/gonum/matrix/mat64"
 	"log"
-	"time"
-	"runtime"
-	"regexp"
 )
 
 
@@ -103,8 +100,6 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 
 // forwardFeed computes the z-s and activations at every neuron and returns the output layer
 func (n *Network) forwardFeed(x mat64.Matrix) *mat64.Dense {
-	defer TimeTrack(time.Now())
-
 	n.activations[0].Clone(x)
 	for k := range n.Sizes[1:] {
 		n.z[k].Mul(n.weights[k].T(), n.activations[k])
@@ -117,15 +112,11 @@ func (n *Network) forwardFeed(x mat64.Matrix) *mat64.Dense {
 
 // outputError computes the error at the output neurons
 func (n *Network) outputError(y mat64.Matrix) {
-	defer TimeTrack(time.Now())
-
 	n.outputErrorFunc(n.delta[n.l-1], n.activations[n.l], y)
 }
 
 // outputGradients computes the (delta) gradients at the output layer
 func (n *Network) outputGradients() {
-	defer TimeTrack(time.Now())
-
 	n.deltaNablaB[n.l-1].Clone(n.delta[n.l-1])
 	n.deltaNablaW[n.l-1].Mul(n.activations[n.l-1], n.delta[n.l-1].T())
 }
@@ -133,8 +124,6 @@ func (n *Network) outputGradients() {
 // backPropError backpropagates the error and computes the (delta) gradients
 // at every layer
 func (n *Network) backPropError() {
-	defer TimeTrack(time.Now())
-
 	for k := 2; k < n.l+1; k++ {
 		n.sp[n.l-k].Apply(n.layers[k].activationFunction.prime, n.z[n.l-k])
 		n.delta[n.l-k].Mul(n.weights[n.l+1-k], n.delta[n.l+1-k])
@@ -147,8 +136,6 @@ func (n *Network) backPropError() {
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
 func (n *Network) BackPropAlgorithm(x, y *mat64.Dense) {
-	defer TimeTrack(time.Now())
-
 	// 1. Forward feed
 	n.forwardFeed(x)
 
@@ -164,8 +151,6 @@ func (n *Network) BackPropAlgorithm(x, y *mat64.Dense) {
 
 // updateGradients adds the delta gradient matrices to the gradient matrices
 func (n *Network) updateGradients() {
-	defer TimeTrack(time.Now())
-
 	for k := range n.Sizes[1:] {
 		n.nablaW[k].Add(n.nablaW[k], n.deltaNablaW[k])
 		n.nablaB[k].Add(n.nablaB[k], n.deltaNablaB[k])
@@ -174,8 +159,6 @@ func (n *Network) updateGradients() {
 
 // updateWeightsAtLayer updates the weights at a given layer of the network
 func (n *Network) updateWeightAtLayer(k int) {
-	defer TimeTrack(time.Now())
-
 	n.weights[k].Scale(1-n.hp.eta*(n.hp.lambda/n.data.n), n.weights[k])
 	n.nablaW[k].Scale(n.hp.eta/n.data.miniBatchSize, n.nablaW[k])
 	n.weights[k].Sub(n.weights[k], n.nablaW[k])
@@ -183,16 +166,12 @@ func (n *Network) updateWeightAtLayer(k int) {
 
 // updateWeightsAtLayer updates the biases at a given layer of the network
 func (n *Network) updateBiasesAtLayer(k int) {
-	defer TimeTrack(time.Now())
-
 	n.nablaB[k].Scale(n.hp.eta/n.data.miniBatchSize, n.nablaB[k])
 	n.biases[k].Sub(n.biases[k], n.nablaB[k])
 }
 
 // clearGradientsAtLayer sets the weight and bias gradients to zero
 func (n *Network) clearGradientsAtLayer(k int) {
-	defer TimeTrack(time.Now())
-
 	n.nablaW[k].Scale(0, n.nablaW[k])
 	n.nablaB[k].Scale(0, n.nablaB[k])
 }
@@ -200,8 +179,6 @@ func (n *Network) clearGradientsAtLayer(k int) {
 // updateWeightsAndBiases updates the weights and biases
 // at every layer of the network
 func (n *Network) updateWeightsAndBiases() {
-	defer TimeTrack(time.Now())
-
 	for k := range n.Sizes[1:] {
 		n.updateWeightAtLayer(k)
 		n.updateBiasesAtLayer(k)
@@ -212,8 +189,6 @@ func (n *Network) updateWeightsAndBiases() {
 // updateMiniBatches runs the stochastic gradient descent
 // algorithm for a set of mini batches (e.g one epoch)
 func (n *Network) updateMiniBatches() {
-	defer TimeTrack(time.Now())
-
 	for i := range n.data.miniBatches {
 		for _, dataSet := range n.data.miniBatches[i] {
 			n.BackPropAlgorithm(dataSet[0], dataSet[1])
@@ -226,9 +201,6 @@ func (n *Network) updateMiniBatches() {
 
 // trainNetwork trains the network with the parameters given as arguments
 func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool) {
-	defer TimeTrack(time.Now())
-
-
 	if len(n.trainingInput) == 0 || len(n.trainingOutput) == 0 {
 		log.Fatal("Insufficient training data submitted")
 	}
@@ -257,6 +229,7 @@ func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float6
 	}
 }
 
+/*
 func TimeTrack(start time.Time) {
 	elapsed := time.Since(start)
 
@@ -272,3 +245,4 @@ func TimeTrack(start time.Time) {
 
 	log.Println(fmt.Sprintf("%s took %s", name, elapsed))
 }
+*/
