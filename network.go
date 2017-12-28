@@ -109,7 +109,7 @@ func (n *Network) forwardFeed(x []float64) []float64 {
 		}
 	}
 
-	return n.activations[2]
+	return n.activations[n.l]
 }
 
 // outputError computes the error at the output neurons
@@ -171,6 +171,8 @@ func (n *Network) updateWeights() {
 			for i := 0; i < n.Sizes[k]; i++ {
 				n.weights[k][j][i] = (1 - n.hp.eta*(n.hp.lambda/n.data.n))*n.weights[k][j][i] -
 					n.hp.eta/n.data.miniBatchSize * n.nablaW[k][j][i]
+
+				n.nablaW[k][j][i] = 0
 			}
 		}
 	}
@@ -181,6 +183,8 @@ func (n *Network) updateBiases() {
 	for k := 0; k < len(n.Sizes) - 1; k++ {
 		for j := 0; j < n.Sizes[k+1]; j++ {
 			n.biases[k][j] = n.biases[k][j] - n.hp.eta/n.data.miniBatchSize*n.nablaB[k][j]
+
+			n.nablaB[k][j] = 0
 		}
 	}
 }
@@ -189,9 +193,6 @@ func (n *Network) updateBiases() {
 // algorithm for a set of mini batches (e.g one epoch)
 func (n *Network) updateMiniBatches() {
 	for i := range n.data.miniBatches {
-		n.nablaW = n.cubicMatrix(zeroFunc())
-		n.nablaB = n.squareMatrix(zeroFunc())
-
 		for _, dataSet := range n.data.miniBatches[i] {
 			n.backPropAlgorithm(dataSet[0], dataSet[1])
 		}
