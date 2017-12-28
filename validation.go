@@ -36,13 +36,11 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	}
 }
 
-
-func (nf NetworkFormat) validate(inputData, outputData []*mat64.Dense, dataCap int) {
+func ValidateArgMaxSlice(n *Network, inputData, outputData []*mat64.Dense) bool {
 	var yes, no int
 
-	for i := range outputData[:dataCap] {
-		if checkIfEqual(nf.forwardFeed(inputData[:dataCap][i]).RawMatrix().Data,
-			outputData[:dataCap][i].RawMatrix().Data) == 1 {
+	for i := range inputData {
+		if checkIfEqual(n.forwardFeed(inputData[i]).RawMatrix().Data, outputData[i].RawMatrix().Data) == 1 {
 			yes += 1
 		} else {
 			no += 1
@@ -50,5 +48,11 @@ func (nf NetworkFormat) validate(inputData, outputData []*mat64.Dense, dataCap i
 	}
 
 	fmt.Println("Hitrate:", 100*float64(yes)/float64(yes+no), "%")
+
+	if yes > 0 {
+		return true
+	}
+
+	return false
 }
 
