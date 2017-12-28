@@ -12,20 +12,17 @@ func OutputErrorXEntropy(delta *mat64.Dense, a, y mat64.Matrix) {
 	delta.Sub(a, y)
 }
 
-func Sigmoid(i, j int, v float64) float64 {
-	return sigmoid(v)
-}
 
 // sigmoid returns the sigmoid function
-func sigmoid(z float64) float64 {
+func Sigmoid(z float64) float64 {
 	return 1.0 / (1.0 + math.Exp(-z))
 }
 
-func SigmoidPrime(i, j int, v float64) float64 {
-	return sigmoidPrime(v)
+// sigmoidPrime returns the differentiated sigmoid function
+func SigmoidPrime(z float64) float64 {
+	return Sigmoid(z) * (1 - Sigmoid(z))
 }
 
-// sigmoidPrime returns the differentiated sigmoid function
-func sigmoidPrime(z float64) float64 {
-	return sigmoid(z) * (1 - sigmoid(z))
+func OutputNeuronError(z float64, a float64, y float64) float64 {
+	return a - y //* sigmoidPrime(z)
 }

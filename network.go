@@ -2,7 +2,6 @@ package network
 
 import (
 	"fmt"
-	"github.com/gonum/matrix/mat64"
 	"log"
 	"time"
 	"runtime"
@@ -30,26 +29,24 @@ type layer struct {
 }
 
 type dataContainers struct {
-	weights     []*mat64.Dense
-	biases      []*mat64.Dense
-	nablaW      []*mat64.Dense
-	nablaB      []*mat64.Dense
-	deltaNablaW []*mat64.Dense
-	deltaNablaB []*mat64.Dense
-	delta       []*mat64.Dense
-	z           []*mat64.Dense
-	activations []*mat64.Dense
-	sp          []*mat64.Dense
+	Sizes       []int
+	biases      [][]float64
+	weights     [][][]float64
+	delta       [][]float64
+	nablaW      [][][]float64
+	nablaB      [][]float64
+	z           [][]float64
+	activations [][]float64
 }
 
 type activationFunction struct {
-	function func(i, j int, v float64) float64
-	prime func(i, j int, v float64) float64
+	function func(v float64) float64
+	prime func(v float64) float64
 }
 
 type NetworkMethods struct {
-	outputErrorFunc  func(delta *mat64.Dense, a, y mat64.Matrix)
-	validationMethod func(n *Network, inputData, outputData []*mat64.Dense) bool
+	outputErrorFunc  func(z float64, a float64, y float64) float64
+	validationMethod func(n *Network, inputData, outputData [][]float64) bool
 }
 
 type HyperParameters struct {
@@ -57,7 +54,7 @@ type HyperParameters struct {
 	lambda float64
 }
 
-func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime func(i, j int, v float64) float64) {
+func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime func(v float64) float64) {
 	n.layer.size = layerSize
 	n.layer.function = activationFunction
 	n.layer.prime = activationPrime
@@ -86,8 +83,8 @@ func (n *Network) initDataContainers() {
 	n.l 			= len(n.Sizes) - 1
 }
 
-func (nm *NetworkMethods) InitNetworkMethods(outputError func(delta *mat64.Dense, a, y mat64.Matrix),
-	validationMethod func(n *Network, inputData, outputData []*mat64.Dense) bool) {
+func (nm *NetworkMethods) InitNetworkMethods(outputError func(z float64, a float64, y float64) float64,
+	validationMethod func(n *Network, inputData, outputData [][]float64) bool) {
 		nm.outputErrorFunc = outputError
 		nm.validationMethod = validationMethod
 }
@@ -108,7 +105,7 @@ func (n *Network) forwardFeed(x []float64) []float64 {
 				sum += n.activations[k][i] * n.weights[k][j][i]
 			}
 			n.z[k][j] = sum + n.biases[k][j]
-			n.activations[k+1][j] = sigmoid(n.z[k][j])
+			n.activations[k+1][j] = n.layer.function(n.z[k][j])
 		}
 	}
 
@@ -138,7 +135,7 @@ func (n *Network) backPropError() {
 			n.delta[n.l-k][j] = 0
 			for i := 0; i < n.Sizes[n.l+2-k]; i++ {
 				n.delta[n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[n.l+1-k][i] *
-					sigmoidPrime(n.z[n.l-k][j])
+					n.layer.prime(n.z[n.l-k][j])
 			}
 			n.nablaB[n.l-k][j] +=  n.delta[n.l-k][j]
 
@@ -151,7 +148,7 @@ func (n *Network) backPropError() {
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (n *Network) BackPropAlgorithm(x, y *mat64.Dense) {
+func (n *Network) backPropAlgorithm(x, y []float64) {
 	//defer TimeTrack(time.Now())
 
 	// 1. Forward feed
@@ -205,20 +202,6 @@ func (n *Network) updateMiniBatches() {
 }
 
 
-// updateMiniBatches runs the stochastic gradient descent
-// algorithm for a set of mini batches (e.g one epoch)
-func (n *Network) updateMiniBatches() {
-	//defer TimeTrack(time.Now())
-
-	for i := range n.data.miniBatches {
-		for _, dataSet := range n.data.miniBatches[i] {
-			n.BackPropAlgorithm(dataSet[0], dataSet[1])
-			n.updateGradients()
-		}
-
-		n.updateWeightsAndBiases()
-	}
-}
 
 // trainNetwork trains the network with the parameters given as arguments
 func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool) {

@@ -1,37 +1,28 @@
 package network
 
 import (
-	"github.com/gonum/matrix/mat64"
 	"math/rand"
 	"time"
 )
 
 type data struct {
-	trainingInput    []*mat64.Dense
-	trainingOutput   []*mat64.Dense
-	validationInput  []*mat64.Dense
-	validationOutput []*mat64.Dense
-	miniBatches      [][][]*mat64.Dense
-	n                float64
-	miniBatchSize    float64
+	trainingInput [][]float64
+	trainingOutput [][]float64
+	validationInput [][]float64
+	validationOutput [][]float64
+	miniBatches [][][][]float64
+	n float64
+	miniBatchSize float64
 }
 
 func (data *data) LoadTrainingData(trainingInput, trainingOutput [][]float64) {
-	for idx := range trainingInput {
-		data.trainingInput = append(data.trainingInput,
-			mat64.NewDense(len(trainingInput[idx]), 1, trainingInput[idx]))
-		data.trainingOutput = append(data.trainingOutput,
-			mat64.NewDense(len(trainingOutput[idx]), 1, trainingOutput[idx]))
-	}
+	data.trainingInput = trainingInput
+	data.trainingOutput = trainingOutput
 }
 
 func (data *data) LoadValidationData(validationInput, validationOutput [][]float64) {
-	for idx := range validationInput {
-		data.validationInput = append(data.validationInput,
-			mat64.NewDense(len(validationInput[idx]), 1, validationInput[idx]))
-		data.validationOutput = append(data.validationOutput,
-			mat64.NewDense(len(validationOutput[idx]), 1, validationOutput[idx]))
-	}
+	data.validationInput = validationInput
+	data.validationOutput = validationOutput
 }
 
 // initSizes initiates the fields containing the size and length of the training set and mini batch
@@ -71,22 +62,21 @@ func (data *data) shuffleAllData() {
 // miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
 func (data *data) miniBatchGenerator(miniBatchSize int, shuffle bool) {
-	defer TimeTrack(time.Now())
 
 	if shuffle {
 		data.shuffleAllData()
 	}
 
 	trainingSetLength := len(data.trainingInput)
-	numberOfMiniBatches := int(trainingSetLength / miniBatchSize)
-	data.miniBatches = make([][][]*mat64.Dense, numberOfMiniBatches, numberOfMiniBatches)
+	numberOfMiniBatches := int(trainingSetLength/miniBatchSize)
+	data.miniBatches = make([][][][]float64, numberOfMiniBatches, numberOfMiniBatches)
 	data.initSizes(trainingSetLength, miniBatchSize)
 
 	for i := 0; i < numberOfMiniBatches; i++ {
-		data.miniBatches[i] = make([][]*mat64.Dense, miniBatchSize, miniBatchSize)
+		data.miniBatches[i] = make([][][]float64, miniBatchSize, miniBatchSize)
 		for j := 0; j < miniBatchSize; j++ {
-			data.miniBatches[i][j] = []*mat64.Dense{data.trainingInput[i*miniBatchSize+j],
-				data.trainingOutput[i*miniBatchSize+j]}
+			data.miniBatches[i][j] = [][]float64{data.trainingInput[i*miniBatchSize + j],
+				data.trainingOutput[i*miniBatchSize + j]}
 		}
 	}
 }

@@ -2,7 +2,6 @@ package network
 
 import (
 	"fmt"
-	"github.com/gonum/matrix/mat64"
 )
 
 // argMax returns the index corresponding
@@ -36,11 +35,11 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 	}
 }
 
-func ValidateArgMaxSlice(n *Network, inputData, outputData []*mat64.Dense) bool {
+func ValidateArgMaxSlice(n *Network, inputData, outputData [][]float64) bool {
 	var yes, no int
 
 	for i := range inputData {
-		if checkIfEqual(n.forwardFeed(inputData[i]).RawMatrix().Data, outputData[i].RawMatrix().Data) == 1 {
+		if checkIfEqual(n.forwardFeed(inputData[i]), outputData[i]) == 1 {
 			yes += 1
 		} else {
 			no += 1
