@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/gonum/matrix/mat64"
 	"log"
+	"time"
+	"runtime"
+	"regexp"
 )
 
 
@@ -201,6 +204,8 @@ func (n *Network) updateMiniBatches() {
 
 // trainNetwork trains the network with the parameters given as arguments
 func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool) {
+	defer TimeTrack(time.Now())
+
 	if len(n.trainingInput) == 0 || len(n.trainingOutput) == 0 {
 		log.Fatal("Insufficient training data submitted")
 	}
@@ -229,7 +234,7 @@ func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float6
 	}
 }
 
-/*
+
 func TimeTrack(start time.Time) {
 	elapsed := time.Since(start)
 
@@ -245,4 +250,3 @@ func TimeTrack(start time.Time) {
 
 	log.Println(fmt.Sprintf("%s took %s", name, elapsed))
 }
-*/
