@@ -71,6 +71,7 @@ func (data *data) shuffleAllData() {
 // miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
 func (data *data) miniBatchGenerator(miniBatchSize int, shuffle bool) {
+	defer TimeTrack(time.Now())
 
 	if shuffle {
 		data.shuffleAllData()
