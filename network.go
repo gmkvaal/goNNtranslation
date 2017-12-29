@@ -11,6 +11,14 @@ import (
 
 var wg sync.WaitGroup
 
+func init() {
+	log.SetFlags(0) // no extra info in log messages
+	//log.SetOutput(ioutil.Discard) // turns off logging
+
+	numcpu := runtime.NumCPU()
+	log.Println("CPU count:", numcpu)
+	runtime.GOMAXPROCS(numcpu) // Try to use all available CPUs.
+}
 
 // Network contains the
 // fields Sizes, biases, and weights
@@ -101,18 +109,15 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 func (n *Network) forwardFeed(x []float64) []float64 {
 	n.activations[0] = x
 	for k := 0; k < n.l; k++ {
-		go func(k int) {
-			for j := 0; j < n.Sizes[k+1]; j++ {
-				sum := 0.0
-				for i := 0; i < n.Sizes[k]; i++ {
-					sum += n.activations[k][i] * n.weights[k][j][i]
-				}
-				n.z[k][j] = sum + n.biases[k][j]
-				n.activations[k+1][j] = n.layer.function(n.z[k][j])
+		for j := 0; j < n.Sizes[k+1]; j++ {
+			sum := 0.0
+			for i := 0; i < n.Sizes[k]; i++ {
+				sum += n.activations[k][i] * n.weights[k][j][i]
+			}
+			n.z[k][j] = sum + n.biases[k][j]
+			n.activations[k+1][j] = n.layer.function(n.z[k][j])
 		}
-		}(k)
 	}
-
 	return n.activations[n.l]
 }
 
@@ -138,8 +143,7 @@ func (n *Network) backPropError() {
 		for j := 0; j < n.Sizes[n.l+1-k]; j++ {
 			n.delta[n.l-k][j] = 0
 			for i := 0; i < n.Sizes[n.l+2-k]; i++ {
-				n.delta[n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[n.l+1-k][i] *
-					n.layer.prime(n.z[n.l-k][j])
+				n.delta[n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[n.l+1-k][i] * n.layer.prime(n.z[n.l-k][j])
 			}
 			n.nablaB[n.l-k][j] +=  n.delta[n.l-k][j]
 
@@ -153,7 +157,7 @@ func (n *Network) backPropError() {
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
 func (n *Network) backPropAlgorithm(x, y []float64) {
-	//defer TimeTrack(time.Now())
+	defer wg.Done()
 
 	// 1. Forward feed
 	n.forwardFeed(x)
@@ -198,22 +202,25 @@ func (n *Network) updateBiases() {
 // updateMiniBatches runs the stochastic gradient descent
 // algorithm for a set of mini batches (e.g one epoch)
 func (n *Network) updateMiniBatches() {
+
+	defer TimeTrack(time.Now())
+
 	for i := range n.data.miniBatches {
 		for _, dataSet := range n.data.miniBatches[i] {
-			n.backPropAlgorithm(dataSet[0], dataSet[1])
+			wg.Add(1)
+			go n.backPropAlgorithm(dataSet[0], dataSet[1])
 		}
 
+		wg.Wait()
 		n.updateWeights()
 		n.updateBiases()
 	}
 }
 
-
-
 // trainNetwork trains the network with the parameters given as arguments
 func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool) {
-	defer TimeTrack(time.Now())
 
+	defer TimeTrack(time.Now())
 
 	if len(n.trainingInput) == 0 || len(n.trainingOutput) == 0 {
 		log.Fatal("Insufficient training data submitted")
