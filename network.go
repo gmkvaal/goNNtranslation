@@ -3,11 +3,11 @@ package network
 import (
 	"fmt"
 	"log"
+	"math"
 	"regexp"
 	"runtime"
 	"sync"
 	"time"
-	"math"
 )
 
 var wg sync.WaitGroup
@@ -29,19 +29,19 @@ type Network struct {
 type layer struct {
 	size int
 	activationFunction
+	intervals [][]int
 }
 
 type dataContainers struct {
 	Sizes       []int
 	biases      [][]float64
-	weights    	[][][]float64
+	weights     [][][]float64
 	delta       [][][]float64
 	nablaW      [][][][]float64
 	nablaB      [][][]float64
 	z           [][][]float64
 	activations [][][]float64
 }
-
 
 type activationFunction struct {
 	function func(v float64) float64
@@ -58,12 +58,20 @@ type HyperParameters struct {
 	lambda float64
 }
 
-func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime func(v float64) float64) {
+func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime func(v float64) float64,
+	intervals []int) {
 	n.layer.size = layerSize
 	n.layer.function = activationFunction
 	n.layer.prime = activationPrime
 
+	intervalStart := 0
+	for _, intervalStop := range intervals {
+		n.layer.intervals = append(n.layer.intervals, []int{intervalStart, intervalStop+intervalStart})
+		intervalStart += intervalStop
+	}
+
 	n.layers = append(n.layers, n.layer)
+	n.layer.intervals = nil
 }
 
 func (n *Network) setSizes() {
@@ -111,7 +119,7 @@ func (n *Network) forwardFeed(x []float64, proc int) []float64 {
 				sum += n.activations[proc][k][i] * n.weights[k][j][i]
 			}
 			n.z[proc][k][j] = sum + n.biases[k][j]
-			n.activations[proc][k+1][j] = n.layer.function(n.z[proc][k][j])
+			n.activations[proc][k+1][j] = n.layers[k+1].function(n.z[proc][k][j])
 		}
 	}
 
@@ -141,7 +149,7 @@ func (n *Network) backPropError(proc int) {
 			n.delta[proc][n.l-k][j] = 0
 			for i := 0; i < n.Sizes[n.l+2-k]; i++ {
 				n.delta[proc][n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[proc][n.l+1-k][i] *
-					n.layer.prime(n.z[proc][n.l-k][j])
+					n.layers[n.l+1-k].prime(n.z[proc][n.l-k][j])
 			}
 			n.nablaB[proc][n.l-k][j] += n.delta[proc][n.l-k][j]
 
@@ -188,25 +196,50 @@ func (n *Network) mergeGradients(proc int) {
 
 // updateWeights updates the weight matrix following a mini batch
 func (n *Network) updateWeights() {
-	for k := 0; k < len(n.Sizes)-1; k++ {
-		for j := 0; j < n.Sizes[k+1]; j++ {
-			for i := 0; i < n.Sizes[k]; i++ {
-				for idx := 1; idx < n.nCores; idx++ {
-					n.nablaW[0][k][j][i] += n.nablaW[idx][k][j][i]
-					n.nablaW[idx][k][j][i] = 0
-				}
-				n.weights[k][j][i] = (1 - n.hp.eta*(n.hp.lambda/n.data.n))*n.weights[k][j][i] -
-					n.hp.eta/n.data.miniBatchSize*n.nablaW[0][k][j][i]
+	defer wg.Done()
+	defer TimeTrack(time.Now())
 
-				// Resetting gradients to zero
-				n.nablaW[0][k][j][i] = 0
-			}
+	for k := 0; k < len(n.Sizes)-1; k++ {
+
+		for _, interval := range n.layers[k+1].intervals {
+
+			//wg.Add(1)
+
+			go func(intervalStart, intervalStop, k int) {
+				//defer wg.Done()
+
+				for j := intervalStart; j < intervalStop; j++ {
+					for i := 0; i < n.Sizes[k]; i++ {
+						for idx := 1; idx < n.nCores; idx++ {
+							n.nablaW[0][k][j][i] += n.nablaW[idx][k][j][i]
+							n.nablaW[idx][k][j][i] = 0
+						}
+						//fmt.Println("k", k, "j", j, "i", i)
+
+						n.weights[k][j][i] = (1-n.hp.eta*(n.hp.lambda/n.data.n))*n.weights[k][j][i] -
+							n.hp.eta/n.data.miniBatchSize*n.nablaW[0][k][j][i]
+
+						// Resetting gradients to zero
+						n.nablaW[0][k][j][i] = 0
+					}
+				}
+
+
+			}(interval[0], interval[1], k)
+
 		}
+
 	}
+
+	//wg.Wait()
+
 }
+
 
 // updateBiases updates the bias matrix following a mini batch
 func (n *Network) updateBiases() {
+	defer wg.Done()
+
 	for k := 0; k < len(n.Sizes)-1; k++ {
 		for j := 0; j < n.Sizes[k+1]; j++ {
 			for idx := 1; idx < n.nCores; idx++ {
@@ -234,8 +267,11 @@ func (n *Network) updateMiniBatches() {
 		}
 
 		wg.Wait()
-		n.updateWeights()
-		n.updateBiases()
+
+		wg.Add(2)
+		go n.updateWeights()
+		go n.updateBiases()
+		wg.Wait()
 	}
 }
 
