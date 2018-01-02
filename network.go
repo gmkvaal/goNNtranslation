@@ -3,31 +3,24 @@ package network
 import (
 	"fmt"
 	"log"
-	"time"
-	"runtime"
 	"regexp"
+	"runtime"
 	"sync"
+	"time"
+	"math"
 )
 
 var wg sync.WaitGroup
 
-func init() {
-	log.SetFlags(0) // no extra info in log messages
-	//log.SetOutput(ioutil.Discard) // turns off logging
-
-	numcpu := runtime.NumCPU()
-	log.Println("CPU count:", numcpu)
-	runtime.GOMAXPROCS(numcpu) // Try to use all available CPUs.
-}
-
 // Network contains the
 // fields Sizes, biases, and weights
 type Network struct {
-	Sizes       []int
-	layer	layer
+	Sizes  []int
+	layer  layer
 	layers []layer
-	l           int
-	hp          HyperParameters
+	l      int
+	nCores int
+	hp     HyperParameters
 	data
 	NetworkMethods
 	dataContainers
@@ -41,17 +34,18 @@ type layer struct {
 type dataContainers struct {
 	Sizes       []int
 	biases      [][]float64
-	weights     [][][]float64
-	delta       [][]float64
-	nablaW      [][][]float64
-	nablaB      [][]float64
-	z           [][]float64
-	activations [][]float64
+	weights    	[][][]float64
+	delta       [][][]float64
+	nablaW      [][][][]float64
+	nablaB      [][][]float64
+	z           [][][]float64
+	activations [][][]float64
 }
+
 
 type activationFunction struct {
 	function func(v float64) float64
-	prime func(v float64) float64
+	prime    func(v float64) float64
 }
 
 type NetworkMethods struct {
@@ -72,8 +66,7 @@ func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime fu
 	n.layers = append(n.layers, n.layer)
 }
 
-
-func (n *Network) setSizes(){
+func (n *Network) setSizes() {
 	for idx := range n.layers {
 		n.Sizes = append(n.Sizes, n.layers[idx].size)
 	}
@@ -81,22 +74,25 @@ func (n *Network) setSizes(){
 
 // initNetwork initiates the weights
 // and biases with random numbers
-func (n *Network) initDataContainers() {
+func (n *Network) initDataContainers(nCores int) {
 	n.setSizes()
+	n.l = len(n.Sizes) - 1
+	n.nCores = nCores
 	n.weights = n.cubicMatrix(randomFunc())
 	n.biases = n.squareMatrix(randomFunc())
-	n.delta = n.squareMatrix(zeroFunc())
-	n.nablaW = n.cubicMatrix(zeroFunc())
-	n.nablaB = n.squareMatrix(zeroFunc())
-	n.z = n.squareMatrix(zeroFunc())
-	n.activations = n.squareMatrixFull(zeroFunc())
-	n.l 			= len(n.Sizes) - 1
+	for idx := 0; idx < n.nCores; idx++ {
+		n.delta = append(n.delta, n.squareMatrix(zeroFunc()))
+		n.nablaW = append(n.nablaW, n.cubicMatrix(zeroFunc()))
+		n.nablaB = append(n.nablaB, n.squareMatrix(zeroFunc()))
+		n.z = append(n.z, n.squareMatrix(zeroFunc()))
+		n.activations = append(n.activations, n.squareMatrixFull(zeroFunc()))
+	}
 }
 
 func (nm *NetworkMethods) InitNetworkMethods(outputError func(z float64, a float64, y float64) float64,
 	validationMethod func(n *Network, inputData, outputData [][]float64) bool) {
-		nm.outputErrorFunc = outputError
-		nm.validationMethod = validationMethod
+	nm.outputErrorFunc = outputError
+	nm.validationMethod = validationMethod
 }
 
 // setHyperParameters initiates the hyper parameters
@@ -106,49 +102,51 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 }
 
 // forwardFeed updates all neurons for input x
-func (n *Network) forwardFeed(x []float64) []float64 {
-	n.activations[0] = x
+func (n *Network) forwardFeed(x []float64, proc int) []float64 {
+	n.activations[proc][0] = x
 	for k := 0; k < n.l; k++ {
 		for j := 0; j < n.Sizes[k+1]; j++ {
 			sum := 0.0
 			for i := 0; i < n.Sizes[k]; i++ {
-				sum += n.activations[k][i] * n.weights[k][j][i]
+				sum += n.activations[proc][k][i] * n.weights[k][j][i]
 			}
-			n.z[k][j] = sum + n.biases[k][j]
-			n.activations[k+1][j] = n.layer.function(n.z[k][j])
+			n.z[proc][k][j] = sum + n.biases[k][j]
+			n.activations[proc][k+1][j] = n.layer.function(n.z[proc][k][j])
 		}
 	}
-	return n.activations[n.l]
+
+	return n.activations[proc][n.l]
 }
 
 // outputError computes the error at the output neurons
-func (n *Network) outputError(y []float64) {
+func (n *Network) outputError(y []float64, proc int) {
 	for j := 0; j < n.Sizes[n.l]; j++ {
-		n.delta[n.l-1][j] = n.outputErrorFunc(n.z[n.l-1][j], n.activations[n.l][j], y[j])
+		n.delta[proc][n.l-1][j] = n.outputErrorFunc(n.z[proc][n.l-1][j], n.activations[proc][n.l][j], y[j])
 	}
 }
 
-func (n *Network) outputGradients()  {
+func (n *Network) outputGradients(proc int) {
 	for j := 0; j < n.Sizes[n.l]; j++ {
-		n.nablaB[n.l-1][j] += n.delta[n.l-1][j]
+		n.nablaB[proc][n.l-1][j] += n.delta[proc][n.l-1][j]
 		for i := 0; i < n.Sizes[n.l-1]; i++ {
-			n.nablaW[n.l-1][j][i] += n.delta[n.l-1][j]*n.activations[n.l-1][i]
+			n.nablaW[proc][n.l-1][j][i] += n.delta[proc][n.l-1][j] * n.activations[proc][n.l-1][i]
 		}
 	}
 }
 
 // backPropError backpropagates the error through the hidden layers
-func (n *Network) backPropError() {
+func (n *Network) backPropError(proc int) {
 	for k := 2; k < n.l+1; k++ {
 		for j := 0; j < n.Sizes[n.l+1-k]; j++ {
-			n.delta[n.l-k][j] = 0
+			n.delta[proc][n.l-k][j] = 0
 			for i := 0; i < n.Sizes[n.l+2-k]; i++ {
-				n.delta[n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[n.l+1-k][i] * n.layer.prime(n.z[n.l-k][j])
+				n.delta[proc][n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[proc][n.l+1-k][i] *
+					n.layer.prime(n.z[proc][n.l-k][j])
 			}
-			n.nablaB[n.l-k][j] +=  n.delta[n.l-k][j]
+			n.nablaB[proc][n.l-k][j] += n.delta[proc][n.l-k][j]
 
 			for i := 0; i < n.Sizes[n.l-k]; i++ {
-				n.nablaW[n.l-k][j][i] += n.delta[n.l-k][j] * n.activations[n.l-k][i]
+				n.nablaW[proc][n.l-k][j][i] += n.delta[proc][n.l-k][j] * n.activations[proc][n.l-k][i]
 			}
 		}
 	}
@@ -156,32 +154,52 @@ func (n *Network) backPropError() {
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (n *Network) backPropAlgorithm(x, y []float64) {
+func (n *Network) backPropAlgorithm(x, y []float64, proc int) {
+	//defer TimeTrack(time.Now())
 	defer wg.Done()
 
 	// 1. Forward feed
-	n.forwardFeed(x)
+	n.forwardFeed(x, proc)
 
 	// 2. Computing the output error (delta L).
-	n.outputError(y)
+	n.outputError(y, proc)
 
 	// 3. Gradients at the output layer
-	n.outputGradients()
+	n.outputGradients(proc)
 
 	// 4. Backpropagating the error
-	n.backPropError()
+	n.backPropError(proc)
 }
+
+/*
+func (n *Network) mergeGradients(proc int) {
+	for idx := 1; idx < proc; idx++ {
+		for k := 0; k < len(n.Sizes)-1; k++ {
+			for j := 0; j < n.Sizes[k+1]; j++ {
+				for i := 0; i < n.Sizes[k]; i++ {
+					n.nablaW[0][k][j][i] += n.nablaW[idx][k][j][i]
+				}
+				n.nablaB[0][k][j] += n.nablaB[idx][k][j]
+			}
+		}
+	}
+}
+*/
 
 // updateWeights updates the weight matrix following a mini batch
 func (n *Network) updateWeights() {
-	for k := 0; k < len(n.Sizes) - 1; k++ {
+	for k := 0; k < len(n.Sizes)-1; k++ {
 		for j := 0; j < n.Sizes[k+1]; j++ {
 			for i := 0; i < n.Sizes[k]; i++ {
+				for idx := 1; idx < n.nCores; idx++ {
+					n.nablaW[0][k][j][i] += n.nablaW[idx][k][j][i]
+					n.nablaW[idx][k][j][i] = 0
+				}
 				n.weights[k][j][i] = (1 - n.hp.eta*(n.hp.lambda/n.data.n))*n.weights[k][j][i] -
-					n.hp.eta/n.data.miniBatchSize * n.nablaW[k][j][i]
+					n.hp.eta/n.data.miniBatchSize*n.nablaW[0][k][j][i]
 
 				// Resetting gradients to zero
-				n.nablaW[k][j][i] = 0
+				n.nablaW[0][k][j][i] = 0
 			}
 		}
 	}
@@ -189,12 +207,16 @@ func (n *Network) updateWeights() {
 
 // updateBiases updates the bias matrix following a mini batch
 func (n *Network) updateBiases() {
-	for k := 0; k < len(n.Sizes) - 1; k++ {
+	for k := 0; k < len(n.Sizes)-1; k++ {
 		for j := 0; j < n.Sizes[k+1]; j++ {
-			n.biases[k][j] = n.biases[k][j] - n.hp.eta/n.data.miniBatchSize*n.nablaB[k][j]
+			for idx := 1; idx < n.nCores; idx++ {
+				n.nablaB[0][k][j] += n.nablaB[idx][k][j]
+				n.nablaB[idx][k][j] = 0
+			}
+			n.biases[k][j] = n.biases[k][j] - n.hp.eta/n.data.miniBatchSize*n.nablaB[0][k][j]
 
 			// Resetting gradients to zero
-			n.nablaB[k][j] = 0
+			n.nablaB[0][k][j] = 0
 		}
 	}
 }
@@ -206,9 +228,9 @@ func (n *Network) updateMiniBatches() {
 	defer TimeTrack(time.Now())
 
 	for i := range n.data.miniBatches {
-		for _, dataSet := range n.data.miniBatches[i] {
+		for idx, dataSet := range n.data.miniBatches[i] {
 			wg.Add(1)
-			go n.backPropAlgorithm(dataSet[0], dataSet[1])
+			go n.backPropAlgorithm(dataSet[0], dataSet[1], int(math.Mod(float64(idx), float64(n.nCores))))
 		}
 
 		wg.Wait()
@@ -218,9 +240,10 @@ func (n *Network) updateMiniBatches() {
 }
 
 // trainNetwork trains the network with the parameters given as arguments
-func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool) {
-
+func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool, nCores int) {
 	defer TimeTrack(time.Now())
+
+	runtime.GOMAXPROCS(nCores) // Number of cores used
 
 	if len(n.trainingInput) == 0 || len(n.trainingOutput) == 0 {
 		log.Fatal("Insufficient training data submitted")
@@ -232,7 +255,7 @@ func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float6
 		}
 	}
 
-	n.initDataContainers()
+	n.initDataContainers(nCores)
 	n.hp.InitHyperParameters(eta, lambda)
 
 	for i := 0; i < epochs; i++ {

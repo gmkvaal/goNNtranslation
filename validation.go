@@ -39,7 +39,7 @@ func ValidateArgMaxSlice(n *Network, inputData, outputData [][]float64) bool {
 	var yes, no int
 
 	for i := range inputData {
-		if checkIfEqual(n.forwardFeed(inputData[i]), outputData[i]) == 1 {
+		if checkIfEqual(n.forwardFeed(inputData[i], 0), outputData[i]) == 1 {
 			yes += 1
 		} else {
 			no += 1
