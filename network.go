@@ -111,29 +111,36 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 
 // forwardFeed updates all neurons for input x
 func (n *Network) forwardFeed(x []float64, proc int) []float64 {
+	//defer TimeTrack(time.Now())
+
 	n.activations[proc][0] = x
 	for k := 0; k < n.l; k++ {
-		for j := 0; j < n.Sizes[k+1]; j++ {
-			sum := 0.0
-			for i := 0; i < n.Sizes[k]; i++ {
-				sum += n.activations[proc][k][i] * n.weights[k][j][i]
+			for j := 0; j < n.Sizes[k+1]; j++ {
+				sum := 0.0
+				for i := 0; i < n.Sizes[k]; i++ {
+					sum += n.activations[proc][k][i] * n.weights[k][j][i]
+				}
+				n.z[proc][k][j] = sum + n.biases[k][j]
+				n.activations[proc][k+1][j] = n.layers[k+1].function(n.z[proc][k][j])
 			}
-			n.z[proc][k][j] = sum + n.biases[k][j]
-			n.activations[proc][k+1][j] = n.layers[k+1].function(n.z[proc][k][j])
-		}
 	}
-
 	return n.activations[proc][n.l]
 }
 
 // outputError computes the error at the output neurons
 func (n *Network) outputError(y []float64, proc int) {
+	//defer TimeTrack(time.Now())
+
+
 	for j := 0; j < n.Sizes[n.l]; j++ {
 		n.delta[proc][n.l-1][j] = n.outputErrorFunc(n.z[proc][n.l-1][j], n.activations[proc][n.l][j], y[j])
 	}
 }
 
 func (n *Network) outputGradients(proc int) {
+	//defer TimeTrack(time.Now())
+
+
 	for j := 0; j < n.Sizes[n.l]; j++ {
 		n.nablaB[proc][n.l-1][j] += n.delta[proc][n.l-1][j]
 		for i := 0; i < n.Sizes[n.l-1]; i++ {
@@ -144,10 +151,11 @@ func (n *Network) outputGradients(proc int) {
 
 // backPropError backpropagates the error through the hidden layers
 func (n *Network) backPropError(proc int) {
+	//defer TimeTrack(time.Now())
+
 	for k := 2; k < n.l+1; k++ {
 		go func(k int) {
 			for j := 0; j < n.Sizes[n.l+1-k]; j++ {
-				go func(j int) {
 				n.delta[proc][n.l-k][j] = 0
 				for i := 0; i < n.Sizes[n.l+2-k]; i++ {
 					n.delta[proc][n.l-k][j] += n.weights[n.l+1-k][i][j] * n.delta[proc][n.l+1-k][i] *
@@ -158,7 +166,6 @@ func (n *Network) backPropError(proc int) {
 				for i := 0; i < n.Sizes[n.l-k]; i++ {
 					n.nablaW[proc][n.l-k][j][i] += n.delta[proc][n.l-k][j] * n.activations[proc][n.l-k][i]
 				}
-				}(k)
 			}
 		}(k)
 	}
@@ -238,6 +245,8 @@ func (n *Network) updateWeights() {
 // updateBiases updates the bias matrix following a mini batch
 func (n *Network) updateBiases() {
 	defer wg.Done()
+	//defer TimeTrack(time.Now())
+
 
 	for k := 0; k < len(n.Sizes)-1; k++ {
 		for j := 0; j < n.Sizes[k+1]; j++ {
@@ -268,7 +277,7 @@ func (n *Network) updateMiniBatches() {
 		wg.Wait()
 
 		wg.Add(2)
-		go n.updateWeightsSerial()
+		go n.updateWeights()
 		go n.updateBiases()
 		wg.Wait()
 	}
