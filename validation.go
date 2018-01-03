@@ -37,13 +37,13 @@ func checkIfEqual(yNetwork []float64, y []float64) int {
 
 func ValidateArgMaxSlice(n *Network, inputData, outputData [][]float64) bool {
 	var yes, no int
-
+	
 	for i := range inputData {
-		if checkIfEqual(n.forwardFeed(inputData[i], 0), outputData[i]) == 1 {
-			yes += 1
-		} else {
-			no += 1
-		}
+			if checkIfEqual(n.forwardFeed(inputData[i], 0), outputData[i]) == 1 {
+				yes += 1
+			} else {
+				no += 1
+			}
 	}
 
 	fmt.Println("Hitrate:", 100*float64(yes)/float64(yes+no), "%")
