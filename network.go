@@ -108,6 +108,8 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 
 // forwardFeed computes the z-s and activations at every neuron and returns the output layer
 func (n *Network) forwardFeed(x mat64.Matrix, proc int) *mat64.Dense {
+	//defer TimeTrack(time.Now())
+
 	n.activations[proc][0].Clone(x)
 	for k := range n.Sizes[1:] {
 		n.z[proc][k].Mul(n.weights[k].T(), n.activations[proc][k])
@@ -120,11 +122,15 @@ func (n *Network) forwardFeed(x mat64.Matrix, proc int) *mat64.Dense {
 
 // outputError computes the error at the output neurons
 func (n *Network) outputError(y mat64.Matrix, proc int) {
+	//defer TimeTrack(time.Now())
+
 	n.outputErrorFunc(n.delta[proc][n.l-1], n.activations[proc][n.l], y)
 }
 
 // outputGradients computes the (delta) gradients at the output layer
 func (n *Network) outputGradients(proc int) {
+	//defer TimeTrack(time.Now())
+
 	n.deltaNablaB[proc][n.l-1].Clone(n.delta[proc][n.l-1])
 	n.deltaNablaW[proc][n.l-1].Mul(n.activations[proc][n.l-1], n.delta[proc][n.l-1].T())
 }
@@ -132,12 +138,29 @@ func (n *Network) outputGradients(proc int) {
 // backPropError backpropagates the error and computes the (delta) gradients
 // at every layer
 func (n *Network) backPropError(proc int) {
+	//defer TimeTrack(time.Now())
+
+	var wg sync.WaitGroup
+
 	for k := 2; k < n.l+1; k++ {
-		n.sp[proc][n.l-k].Apply(n.layers[k].activationFunction.prime, n.z[proc][n.l-k])
-		n.delta[proc][n.l-k].Mul(n.weights[n.l+1-k], n.delta[proc][n.l+1-k])
-		n.delta[proc][n.l-k].MulElem(n.delta[proc][n.l-k], n.sp[proc][n.l-k])
-		n.deltaNablaB[proc][n.l-k].Clone(n.delta[proc][n.l-k])
-		n.deltaNablaW[proc][n.l-k].Mul(n.activations[proc][n.l-k], n.delta[proc][n.l-k].T())
+		wg.Add(1)
+		go func (k int) {
+			defer wg.Done()
+			n.sp[proc][n.l-k].Apply(n.layers[k].activationFunction.prime, n.z[proc][n.l-k])
+			n.delta[proc][n.l-k].Mul(n.weights[n.l+1-k], n.delta[proc][n.l+1-k])
+			n.delta[proc][n.l-k].MulElem(n.delta[proc][n.l-k], n.sp[proc][n.l-k])
+			n.deltaNablaB[proc][n.l-k].Clone(n.delta[proc][n.l-k])
+			n.deltaNablaW[proc][n.l-k].Mul(n.activations[proc][n.l-k], n.delta[proc][n.l-k].T())
+		}(k)
+	}
+	wg.Wait()
+}
+
+// updateGradients adds the delta gradient matrices to the gradient matrices
+func (n *Network) updateGradients(proc int) {
+	for k := range n.Sizes[1:] {
+		n.nablaW[proc][k].Add(n.nablaW[proc][k], n.deltaNablaW[proc][k])
+		n.nablaB[proc][k].Add(n.nablaB[proc][k], n.deltaNablaB[proc][k])
 	}
 }
 
@@ -170,15 +193,6 @@ func (n *Network) mergeGradientsAtLayer(k int) {
 }
 
 
-
-// updateGradients adds the delta gradient matrices to the gradient matrices
-func (n *Network) updateGradients(proc int) {
-	for k := range n.Sizes[1:] {
-		n.nablaW[proc][k].Add(n.nablaW[proc][k], n.deltaNablaW[proc][k])
-		n.nablaB[proc][k].Add(n.nablaB[proc][k], n.deltaNablaB[proc][k])
-	}
-}
-
 // updateWeightsAtLayer updates the weights at a given layer of the network
 func (n *Network) updateWeightAtLayer(k int) {
 	n.weights[k].Scale(1-n.hp.eta*(n.hp.lambda/n.data.n), n.weights[k])
@@ -201,6 +215,7 @@ func (n *Network) clearGradientsAtLayer(k, proc int) {
 // updateWeightsAndBiases updates the weights and biases
 // at every layer of the network
 func (n *Network) updateWeightsAndBiases() {
+
 	for k := range n.Sizes[1:] {
 		n.mergeGradientsAtLayer(k)
 		n.updateWeightAtLayer(k)
