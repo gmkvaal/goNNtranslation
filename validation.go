@@ -40,7 +40,7 @@ func ValidateArgMaxSlice(n *Network, inputData, outputData []*mat64.Dense) bool 
 	var yes, no int
 
 	for i := range inputData {
-		if checkIfEqual(n.forwardFeed(inputData[i]).RawMatrix().Data, outputData[i].RawMatrix().Data) == 1 {
+		if checkIfEqual(n.forwardFeed(inputData[i], 0).RawMatrix().Data, outputData[i].RawMatrix().Data) == 1 {
 			yes += 1
 		} else {
 			no += 1
