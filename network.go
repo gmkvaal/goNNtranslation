@@ -111,7 +111,7 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 
 // forwardFeed updates all neurons for input x
 func (n *Network) forwardFeed(x []float64, proc int) []float64 {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
 	n.activations[proc][0] = x
 	for k := 0; k < n.l; k++ {
@@ -129,7 +129,7 @@ func (n *Network) forwardFeed(x []float64, proc int) []float64 {
 
 // outputError computes the error at the output neurons
 func (n *Network) outputError(y []float64, proc int) {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
 
 	for j := 0; j < n.Sizes[n.l]; j++ {
@@ -138,7 +138,7 @@ func (n *Network) outputError(y []float64, proc int) {
 }
 
 func (n *Network) outputGradients(proc int) {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
 
 	for j := 0; j < n.Sizes[n.l]; j++ {
@@ -151,7 +151,7 @@ func (n *Network) outputGradients(proc int) {
 
 // backPropError backpropagates the error through the hidden layers
 func (n *Network) backPropError(proc int) {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
 	for k := 2; k < n.l+1; k++ {
 		go func(k int) {
@@ -174,7 +174,8 @@ func (n *Network) backPropError(proc int) {
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
 func (n *Network) backPropAlgorithm(x, y []float64, proc int) {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
+
 	defer wg.Done()
 
 	// 1. Forward feed
@@ -193,7 +194,7 @@ func (n *Network) backPropAlgorithm(x, y []float64, proc int) {
 // updateWeights updates the weight matrix following a mini batch
 func (n *Network) updateWeightsSerial() {
 	defer wg.Done()
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 	for k := 0; k < len(n.Sizes)-1; k++ {
 		go func(k int) {
 			for j := 0; j < n.Sizes[k+1]; j++ {
@@ -217,7 +218,7 @@ func (n *Network) updateWeightsSerial() {
 // The
 func (n *Network) updateWeights() {
 	defer wg.Done()
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
 	for k := 0; k < len(n.Sizes)-1; k++ {
 		for _, interval := range n.layers[k+1].intervals {
@@ -245,7 +246,7 @@ func (n *Network) updateWeights() {
 // updateBiases updates the bias matrix following a mini batch
 func (n *Network) updateBiases() {
 	defer wg.Done()
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
 
 	for k := 0; k < len(n.Sizes)-1; k++ {
