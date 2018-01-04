@@ -29,3 +29,15 @@ func sliceWithGonumDense(lenSlice int, rows []int, cols interface{}, input func(
 	}
 	return w
 }
+
+func sliceWithGonumVector(lenSlice int, vecLen[]int, input func(int) float64) []*mat64.Vector {
+	w := make([]*mat64.Vector, lenSlice)
+
+	for k := range w {
+		w[k] = mat64.NewVector(vecLen[k], nil)
+		for i := 0; i < vecLen[k]; i++ {
+				w[k].SetVec(i, input(vecLen[k]))
+			}
+		}
+	return w
+}

@@ -7,11 +7,11 @@ import (
 )
 
 type data struct {
-	trainingInput    []*mat64.Dense
-	trainingOutput   []*mat64.Dense
-	validationInput  []*mat64.Dense
-	validationOutput []*mat64.Dense
-	miniBatches      [][][]*mat64.Dense
+	trainingInput    []*mat64.Vector
+	trainingOutput   []*mat64.Vector
+	validationInput  []*mat64.Vector
+	validationOutput []*mat64.Vector
+	miniBatches      [][][]*mat64.Vector
 	n                float64
 	miniBatchSize    float64
 }
@@ -19,18 +19,18 @@ type data struct {
 func (data *data) LoadTrainingData(trainingInput, trainingOutput [][]float64) {
 	for idx := range trainingInput {
 		data.trainingInput = append(data.trainingInput,
-			mat64.NewDense(len(trainingInput[idx]), 1, trainingInput[idx]))
+			mat64.NewVector(len(trainingInput[idx]), trainingInput[idx]))
 		data.trainingOutput = append(data.trainingOutput,
-			mat64.NewDense(len(trainingOutput[idx]), 1, trainingOutput[idx]))
+			mat64.NewVector(len(trainingOutput[idx]), trainingOutput[idx]))
 	}
 }
 
 func (data *data) LoadValidationData(validationInput, validationOutput [][]float64) {
 	for idx := range validationInput {
 		data.validationInput = append(data.validationInput,
-			mat64.NewDense(len(validationInput[idx]), 1, validationInput[idx]))
+			mat64.NewVector(len(validationInput[idx]), validationInput[idx]))
 		data.validationOutput = append(data.validationOutput,
-			mat64.NewDense(len(validationOutput[idx]), 1, validationOutput[idx]))
+			mat64.NewVector(len(validationOutput[idx]), validationOutput[idx]))
 	}
 }
 
@@ -66,7 +66,6 @@ func (data *data) shuffleAllData() {
 	data.shuffleValidationData()
 }
 
-
 // miniBatchGenerator generates a new set of miniBatches from the training data.
 // miniBatches contain (numberOfMiniBatches) number of mini batches, each of which contains (miniBatchSize) number
 // of len 2 slices containing the trainingInput and trainingOutput at the respective entries.
@@ -78,13 +77,13 @@ func (data *data) miniBatchGenerator(miniBatchSize int, shuffle bool) {
 
 	trainingSetLength := len(data.trainingInput)
 	numberOfMiniBatches := int(trainingSetLength / miniBatchSize)
-	data.miniBatches = make([][][]*mat64.Dense, numberOfMiniBatches, numberOfMiniBatches)
+	data.miniBatches = make([][][]*mat64.Vector, numberOfMiniBatches, numberOfMiniBatches)
 	data.initSizes(trainingSetLength, miniBatchSize)
 
 	for i := 0; i < numberOfMiniBatches; i++ {
-		data.miniBatches[i] = make([][]*mat64.Dense, miniBatchSize, miniBatchSize)
+		data.miniBatches[i] = make([][]*mat64.Vector, miniBatchSize, miniBatchSize)
 		for j := 0; j < miniBatchSize; j++ {
-			data.miniBatches[i][j] = []*mat64.Dense{data.trainingInput[i*miniBatchSize+j],
+			data.miniBatches[i][j] = []*mat64.Vector{data.trainingInput[i*miniBatchSize+j],
 				data.trainingOutput[i*miniBatchSize+j]}
 		}
 	}

@@ -13,6 +13,7 @@ import (
 
 var wg sync.WaitGroup
 
+
 // Network contains the
 // fields Sizes, biases, and weights
 type Network struct {
@@ -34,25 +35,25 @@ type layer struct {
 
 type dataContainers struct {
 	weights     []*mat64.Dense
-	biases      []*mat64.Dense
+	biases      []*mat64.Vector
 	nablaW      [][]*mat64.Dense
-	nablaB      [][]*mat64.Dense
+	nablaB      [][]*mat64.Vector
 	deltaNablaW [][]*mat64.Dense
-	deltaNablaB [][]*mat64.Dense
-	delta       [][]*mat64.Dense
-	z           [][]*mat64.Dense
-	activations [][]*mat64.Dense
-	sp          [][]*mat64.Dense
+	deltaNablaB [][]*mat64.Vector
+	delta       [][]*mat64.Vector
+	z           [][]*mat64.Vector
+	activations [][]*mat64.Vector
+	sp          [][]*mat64.Vector
 }
 
 type activationFunction struct {
-	function func(i, j int, v float64) float64
-	prime    func(i, j int, v float64) float64
+	function func(v float64) float64
+	prime    func(v float64) float64
 }
 
 type NetworkMethods struct {
-	outputErrorFunc  func(delta *mat64.Dense, a, y mat64.Matrix)
-	validationMethod func(n *Network, inputData, outputData []*mat64.Dense) bool
+	outputErrorFunc  func(delta, a, y *mat64.Vector)
+	validationMethod func(n *Network, inputData, outputData []*mat64.Vector) bool
 }
 
 type HyperParameters struct {
@@ -60,7 +61,7 @@ type HyperParameters struct {
 	lambda float64
 }
 
-func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime func(i, j int, v float64) float64) {
+func (n *Network) AddLayer(layerSize int, activationFunction, activationPrime func(v float64) float64) {
 	n.layer.size = layerSize
 	n.layer.function = activationFunction
 	n.layer.prime = activationPrime
@@ -81,21 +82,21 @@ func (n *Network) initDataContainers(nCores int) {
 	n.l = len(n.Sizes) - 1
 	n.nCores = nCores
 	n.weights = sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[:], n.Sizes[1:], randomFunc())
-	n.biases = sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, randomFunc())
+	n.biases = sliceWithGonumVector(len(n.Sizes[1:]), n.Sizes[1:], randomFunc())
 	for idx := 0; idx < n.nCores; idx++ {
 		n.nablaW = append(n.nablaW, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[:], n.Sizes[1:], zeroFunc()))
-		n.nablaB = append(n.nablaB, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc()))
+		n.nablaB = append(n.nablaB, sliceWithGonumVector(len(n.Sizes[1:]), n.Sizes[1:], zeroFunc()))
 		n.deltaNablaW = append(n.deltaNablaW, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[:], n.Sizes[1:], zeroFunc()))
-		n.deltaNablaB = append(n.deltaNablaB, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc()))
-		n.delta = append(n.delta, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc()))
-		n.z = append(n.z, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc()))
-		n.activations = append(n.activations, sliceWithGonumDense(len(n.Sizes[:]), n.Sizes[:], 1, zeroFunc()))
-		n.sp = append(n.sp, sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc()))
+		n.deltaNablaB = append(n.deltaNablaB, sliceWithGonumVector(len(n.Sizes[1:]), n.Sizes[1:], zeroFunc()))
+		n.delta = append(n.delta, sliceWithGonumVector(len(n.Sizes[1:]), n.Sizes[1:], zeroFunc()))
+		n.z = append(n.z, sliceWithGonumVector(len(n.Sizes[1:]), n.Sizes[1:], zeroFunc()))
+		n.activations = append(n.activations, sliceWithGonumVector(len(n.Sizes[:]), n.Sizes[:], zeroFunc()))
+		n.sp = append(n.sp, sliceWithGonumVector(len(n.Sizes[1:]), n.Sizes[1:], zeroFunc()))
 	}
 }
 
-func (nm *NetworkMethods) InitNetworkMethods(outputError func(delta *mat64.Dense, a, y mat64.Matrix),
-	validationMethod func(n *Network, inputData, outputData []*mat64.Dense) bool) {
+func (nm *NetworkMethods) InitNetworkMethods(outputError func(delta, a, y *mat64.Vector),
+	validationMethod func(n *Network, inputData, outputData []*mat64.Vector) bool) {
 	nm.outputErrorFunc = outputError
 	nm.validationMethod = validationMethod
 }
@@ -107,66 +108,76 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 }
 
 // forwardFeed computes the z-s and activations at every neuron and returns the output layer
-func (n *Network) forwardFeed(x mat64.Matrix, proc int) *mat64.Dense {
-	//defer TimeTrack(time.Now())
+func (n *Network) forwardFeed(x *mat64.Vector, proc int) *mat64.Vector {
+	defer TimeTrack(time.Now())
 
-	n.activations[proc][0].Clone(x)
+	n.activations[proc][0].CloneVec(x)
 	for k := range n.Sizes[1:] {
-		n.z[proc][k].Mul(n.weights[k].T(), n.activations[proc][k])
-		n.z[proc][k].Add(n.z[proc][k], n.biases[k])
-		n.activations[proc][k+1].Apply(n.layers[k].activationFunction.function, n.z[proc][k])
+		n.z[proc][k].MulVec(n.weights[k].T(), n.activations[proc][k])
+		n.z[proc][k].AddVec(n.z[proc][k], n.biases[k])
+
+		for j := 0; j < n.Sizes[k+1]; j++ {
+			n.activations[proc][k+1].SetVec(j, n.layers[k].activationFunction.function(n.z[proc][k].At(j, 0)))
+		}
 	}
 
 	return n.activations[proc][n.l]
 }
 
 // outputError computes the error at the output neurons
-func (n *Network) outputError(y mat64.Matrix, proc int) {
-	//defer TimeTrack(time.Now())
-
+func (n *Network) outputError(y *mat64.Vector, proc int) {
+	defer TimeTrack(time.Now())
 	n.outputErrorFunc(n.delta[proc][n.l-1], n.activations[proc][n.l], y)
 }
 
 // outputGradients computes the (delta) gradients at the output layer
 func (n *Network) outputGradients(proc int) {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
 
-	n.deltaNablaB[proc][n.l-1].Clone(n.delta[proc][n.l-1])
+	n.deltaNablaB[proc][n.l-1].CloneVec(n.delta[proc][n.l-1])
 	n.deltaNablaW[proc][n.l-1].Mul(n.activations[proc][n.l-1], n.delta[proc][n.l-1].T())
 }
 
 // backPropError backpropagates the error and computes the (delta) gradients
 // at every layer
 func (n *Network) backPropError(proc int) {
-	//defer TimeTrack(time.Now())
+	defer TimeTrack(time.Now())
+	var wgBP sync.WaitGroup
 
-	var wg sync.WaitGroup
 
 	for k := 2; k < n.l+1; k++ {
-		wg.Add(1)
+		wgBP.Add(1)
 		go func (k int) {
-			defer wg.Done()
-			n.sp[proc][n.l-k].Apply(n.layers[k].activationFunction.prime, n.z[proc][n.l-k])
-			n.delta[proc][n.l-k].Mul(n.weights[n.l+1-k], n.delta[proc][n.l+1-k])
-			n.delta[proc][n.l-k].MulElem(n.delta[proc][n.l-k], n.sp[proc][n.l-k])
-			n.deltaNablaB[proc][n.l-k].Clone(n.delta[proc][n.l-k])
+			defer wgBP.Done()
+
+			for j := 0; j < n.Sizes[n.l+1-k]; j++ {
+				n.sp[proc][n.l-k].SetVec(j, n.layers[k].activationFunction.prime(n.z[proc][n.l-k].At(j,0)) )
+			}
+
+			n.delta[proc][n.l-k].MulVec(n.weights[n.l+1-k], n.delta[proc][n.l+1-k])
+			n.delta[proc][n.l-k].MulElemVec(n.delta[proc][n.l-k], n.sp[proc][n.l-k])
+			n.deltaNablaB[proc][n.l-k].CloneVec(n.delta[proc][n.l-k])
 			n.deltaNablaW[proc][n.l-k].Mul(n.activations[proc][n.l-k], n.delta[proc][n.l-k].T())
+
+
 		}(k)
 	}
-	wg.Wait()
+	wgBP.Wait()
 }
 
 // updateGradients adds the delta gradient matrices to the gradient matrices
 func (n *Network) updateGradients(proc int) {
+	defer TimeTrack(time.Now())
+
 	for k := range n.Sizes[1:] {
 		n.nablaW[proc][k].Add(n.nablaW[proc][k], n.deltaNablaW[proc][k])
-		n.nablaB[proc][k].Add(n.nablaB[proc][k], n.deltaNablaB[proc][k])
+		n.nablaB[proc][k].AddVec(n.nablaB[proc][k], n.deltaNablaB[proc][k])
 	}
 }
 
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
-func (n *Network) BackPropAlgorithm(x, y *mat64.Dense, proc int) {
+func (n *Network) BackPropAlgorithm(x, y *mat64.Vector, proc int) {
 	defer wg.Done()
 
 	// 1. Forward feed
@@ -186,15 +197,18 @@ func (n *Network) BackPropAlgorithm(x, y *mat64.Dense, proc int) {
 }
 
 func (n *Network) mergeGradientsAtLayer(k int) {
+	defer TimeTrack(time.Now())
+
 	for proc := 1; proc < n.nCores; proc++ {
 		n.nablaW[0][k].Add(n.nablaW[0][k], n.nablaW[proc][k])
-		n.nablaB[0][k].Add(n.nablaB[0][k], n.nablaB[proc][k])
+		n.nablaB[0][k].AddVec(n.nablaB[0][k], n.nablaB[proc][k])
 	}
 }
 
 
 // updateWeightsAtLayer updates the weights at a given layer of the network
 func (n *Network) updateWeightAtLayer(k int) {
+
 	n.weights[k].Scale(1-n.hp.eta*(n.hp.lambda/n.data.n), n.weights[k])
 	n.nablaW[0][k].Scale(n.hp.eta/n.data.miniBatchSize, n.nablaW[0][k])
 	n.weights[k].Sub(n.weights[k], n.nablaW[0][k])
@@ -202,14 +216,14 @@ func (n *Network) updateWeightAtLayer(k int) {
 
 // updateWeightsAtLayer updates the biases at a given layer of the network
 func (n *Network) updateBiasesAtLayer(k int) {
-	n.nablaB[0][k].Scale(n.hp.eta/n.data.miniBatchSize, n.nablaB[0][k])
-	n.biases[k].Sub(n.biases[k], n.nablaB[0][k])
+	n.nablaB[0][k].ScaleVec(n.hp.eta/n.data.miniBatchSize, n.nablaB[0][k])
+	n.biases[k].SubVec(n.biases[k], n.nablaB[0][k])
 }
 
 // clearGradientsAtLayer sets the weight and bias gradients to zero
 func (n *Network) clearGradientsAtLayer(k, proc int) {
 	n.nablaW[proc][k].Scale(0, n.nablaW[proc][k])
-	n.nablaB[proc][k].Scale(0, n.nablaB[proc][k])
+	n.nablaB[proc][k].ScaleVec(0, n.nablaB[proc][k])
 }
 
 // updateWeightsAndBiases updates the weights and biases
