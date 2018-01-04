@@ -142,17 +142,15 @@ func (n *Network) outputGradients(proc int) {
 // at every layer
 func (n *Network) backPropError(proc int) {
 	defer TimeTrack(time.Now())
-	var wgBP sync.WaitGroup
+	//var wgBP sync.WaitGroup
 
 
 	for k := 2; k < n.l+1; k++ {
-		wgBP.Add(1)
-		go func (k int) {
-			defer wgBP.Done()
+		//wgBP.Add(1)
+		//go func (k int) {
+		//defer wgBP.Done()
 
-			for j := 0; j < n.Sizes[n.l+1-k]; j++ {
-				n.sp[proc][n.l-k].SetVec(j, n.layers[k].activationFunction.prime(n.z[proc][n.l-k].At(j,0)) )
-			}
+			n.lol(k, proc)
 
 			n.delta[proc][n.l-k].MulVec(n.weights[n.l+1-k], n.delta[proc][n.l+1-k])
 			n.delta[proc][n.l-k].MulElemVec(n.delta[proc][n.l-k], n.sp[proc][n.l-k])
@@ -160,9 +158,16 @@ func (n *Network) backPropError(proc int) {
 			n.deltaNablaW[proc][n.l-k].Mul(n.activations[proc][n.l-k], n.delta[proc][n.l-k].T())
 
 
-		}(k)
+		//}(k)
 	}
-	wgBP.Wait()
+	//wgBP.Wait()
+}
+
+func (n *Network) lol(k, proc int) {
+	defer TimeTrack(time.Now())
+	for j := 0; j < n.Sizes[n.l+1-k]; j++ {
+		n.sp[proc][n.l-k].SetVec(j, n.layers[k].activationFunction.prime(n.z[proc][n.l-k].At(j,0)) )
+	}
 }
 
 // updateGradients adds the delta gradient matrices to the gradient matrices
@@ -178,6 +183,9 @@ func (n *Network) updateGradients(proc int) {
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
 func (n *Network) BackPropAlgorithm(x, y *mat64.Vector, proc int) {
+	defer TimeTrack(time.Now())
+
+
 	defer wg.Done()
 
 	// 1. Forward feed
@@ -208,6 +216,7 @@ func (n *Network) mergeGradientsAtLayer(k int) {
 
 // updateWeightsAtLayer updates the weights at a given layer of the network
 func (n *Network) updateWeightAtLayer(k int) {
+	defer TimeTrack(time.Now())
 
 	n.weights[k].Scale(1-n.hp.eta*(n.hp.lambda/n.data.n), n.weights[k])
 	n.nablaW[0][k].Scale(n.hp.eta/n.data.miniBatchSize, n.nablaW[0][k])
@@ -216,12 +225,16 @@ func (n *Network) updateWeightAtLayer(k int) {
 
 // updateWeightsAtLayer updates the biases at a given layer of the network
 func (n *Network) updateBiasesAtLayer(k int) {
+	defer TimeTrack(time.Now())
+
 	n.nablaB[0][k].ScaleVec(n.hp.eta/n.data.miniBatchSize, n.nablaB[0][k])
 	n.biases[k].SubVec(n.biases[k], n.nablaB[0][k])
 }
 
 // clearGradientsAtLayer sets the weight and bias gradients to zero
 func (n *Network) clearGradientsAtLayer(k, proc int) {
+	defer TimeTrack(time.Now())
+
 	n.nablaW[proc][k].Scale(0, n.nablaW[proc][k])
 	n.nablaB[proc][k].ScaleVec(0, n.nablaB[proc][k])
 }
@@ -229,6 +242,7 @@ func (n *Network) clearGradientsAtLayer(k, proc int) {
 // updateWeightsAndBiases updates the weights and biases
 // at every layer of the network
 func (n *Network) updateWeightsAndBiases() {
+	defer TimeTrack(time.Now())
 
 	for k := range n.Sizes[1:] {
 		n.mergeGradientsAtLayer(k)
