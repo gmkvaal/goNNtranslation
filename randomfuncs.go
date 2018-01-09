@@ -2,8 +2,8 @@ package network
 
 import (
 	"math/rand"
-	"time"
 	"math"
+	"time"
 )
 
 // randomFunc returns a func that

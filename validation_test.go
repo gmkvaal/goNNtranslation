@@ -3,7 +3,6 @@ package network
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/gonum/matrix/mat64"
 )
 
 func TestArgMax(t *testing.T) {
@@ -22,21 +21,24 @@ func TestCheckIfEqual(t *testing.T) {
 }
 
 func TestValidateArgMaxSlice(t *testing.T) {
-	n := Network{}
+	n := &Network{}
 
-	dense1 := mat64.NewDense(3,1, []float64{1.0, 2.0, 3.0})
-	dense2 := mat64.NewDense(3,1, []float64{2.0, 2.0, 3.0})
-	dense3 := mat64.NewDense(3,1, []float64{3.0, 2.0, 3.0})
+	slice1 := []float64{1.0, 2.0, 3.0}
+	slice2 := []float64{1.0, 2.0, 3.0}
+	slice3 := []float64{1.0, 2.0, 3.0}
 
-	inputData := []*mat64.Dense{dense1, dense2, dense3}
-	outputData := []*mat64.Dense{dense1, dense2, dense3}
+	inputData := [][]float64{slice1, slice2, slice3}
+	outputData := [][]float64{slice1, slice2, slice3}
 
-	assert.Equal(t, n.ValidateArgMaxSlice(inputData, outputData), true)
 
-	inputData = []*mat64.Dense{dense1, dense3, dense3}
-	outputData = []*mat64.Dense{dense1, dense2, dense3}
 
-	assert.Equal(t, n.ValidateArgMaxSlice(inputData, outputData), false)
+	assert.Equal(t, ValidateArgMaxSlice(n, inputData, outputData), true)
+
+
+	inputData = [][]float64{slice1, slice3, slice3}
+	outputData = [][]float64{slice1, slice2, slice3}
+
+	assert.Equal(t, ValidateArgMaxSlice(n, inputData, outputData), false)
 
 }
 

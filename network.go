@@ -111,7 +111,7 @@ func (hp *HyperParameters) InitHyperParameters(eta float64, lambda float64) {
 
 // forwardFeed updates all neurons for input x
 func (n *Network) forwardFeed(x []float64, proc int) []float64 {
-	defer TimeTrack(time.Now())
+	// defer TimeTrack(time.Now())
 
 	n.activations[proc][0] = x
 	for k := 0; k < n.l; k++ {
@@ -129,8 +129,7 @@ func (n *Network) forwardFeed(x []float64, proc int) []float64 {
 
 // outputError computes the error at the output neurons
 func (n *Network) outputError(y []float64, proc int) {
-	defer TimeTrack(time.Now())
-
+	// defer TimeTrack(time.Now())
 
 	for j := 0; j < n.Sizes[n.l]; j++ {
 		n.delta[proc][n.l-1][j] = n.outputErrorFunc(n.z[proc][n.l-1][j], n.activations[proc][n.l][j], y[j])
@@ -138,7 +137,7 @@ func (n *Network) outputError(y []float64, proc int) {
 }
 
 func (n *Network) outputGradients(proc int) {
-	defer TimeTrack(time.Now())
+	// defer TimeTrack(time.Now())
 
 
 	for j := 0; j < n.Sizes[n.l]; j++ {
@@ -151,7 +150,7 @@ func (n *Network) outputGradients(proc int) {
 
 // backPropError backpropagates the error through the hidden layers
 func (n *Network) backPropError(proc int) {
-	defer TimeTrack(time.Now())
+	// defer TimeTrack(time.Now())
 
 	for k := 2; k < n.l+1; k++ {
 		go func(k int) {
@@ -174,7 +173,7 @@ func (n *Network) backPropError(proc int) {
 // backProp performs one iteration of the backpropagation algorithm
 // for input x and training output y (one batch in a mini batch)
 func (n *Network) backPropAlgorithm(x, y []float64, proc int) {
-	defer TimeTrack(time.Now())
+	// defer TimeTrack(time.Now())
 
 	defer wg.Done()
 
@@ -194,9 +193,9 @@ func (n *Network) backPropAlgorithm(x, y []float64, proc int) {
 // updateWeights updates the weight matrix following a mini batch
 func (n *Network) updateWeightsSerial() {
 	defer wg.Done()
-	defer TimeTrack(time.Now())
+	//defer TimeTrack(time.Now())
 	for k := 0; k < len(n.Sizes)-1; k++ {
-		go func(k int) {
+		//go func(k int) {
 			for j := 0; j < n.Sizes[k+1]; j++ {
 				for i := 0; i < n.Sizes[k]; i++ {
 					for idx := 1; idx < n.nCores; idx++ {
@@ -210,12 +209,11 @@ func (n *Network) updateWeightsSerial() {
 					n.nablaW[0][k][j][i] = 0
 				}
 			}
-		}(k)
+		//}(k)
 	}
 }
 
 // updateWeights updates the weight matrix following a mini batch.
-// The
 func (n *Network) updateWeights() {
 	defer wg.Done()
 	defer TimeTrack(time.Now())
@@ -246,7 +244,7 @@ func (n *Network) updateWeights() {
 // updateBiases updates the bias matrix following a mini batch
 func (n *Network) updateBiases() {
 	defer wg.Done()
-	defer TimeTrack(time.Now())
+	//defer TimeTrack(time.Now())
 
 
 	for k := 0; k < len(n.Sizes)-1; k++ {
@@ -278,7 +276,7 @@ func (n *Network) updateMiniBatches() {
 		wg.Wait()
 
 		wg.Add(2)
-		go n.updateWeights()
+		go n.updateWeightsSerial()
 		go n.updateBiases()
 		wg.Wait()
 	}
@@ -286,7 +284,7 @@ func (n *Network) updateMiniBatches() {
 
 // trainNetwork trains the network with the parameters given as arguments
 func (n *Network) TrainNetwork(epochs int, miniBatchSize int, eta, lambda float64, shuffle, validate bool, nCores int) {
-	defer TimeTrack(time.Now())
+	// defer TimeTrack(time.Now())
 
 	runtime.GOMAXPROCS(nCores) // Number of cores used
 

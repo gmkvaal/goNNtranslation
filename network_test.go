@@ -2,60 +2,17 @@ package network
 
 import (
 	"testing"
+	"fmt"
 
 	plr "github.com/gmkvaal/pythonlistreader"
-	"github.com/gonum/matrix/mat64"
-	"github.com/stretchr/testify/assert"
-	"fmt"
-	"math"
 )
 
 
 // TestForwardFeed tests the forward feed algorithm
 // by initiating with zero-weights and biases, hence making
 // all z's zero and thus all activations 1/2 (given sigmoids)
-func TestForwardFeed(t *testing.T) {
-	n := Network{}
-	n.AddLayer(2, Sigmoid, SigmoidPrime)
-	n.AddLayer(3, Sigmoid, SigmoidPrime)
-	n.AddLayer(1, Sigmoid, SigmoidPrime)
-	n.initDataContainers()
 
-	w1 := mat64.NewDense(2,3, nil)
-	w1.Set(0, 0, -0.95766323)
-	w1.Set(1, 0, -2.83527046)
-	w1.Set(0, 1, -4.68051798)
-	w1.Set(1, 1, -3.67367494)
-	w1.Set(0, 2, -3.42136137)
-	w1.Set(1, 2, -3.66026809)
 
-	w2 := mat64.NewDense(3,1, nil)
-	w2.Set(0, 0,  3.23952935)
-	w2.Set(1, 0,  9.16831414)
-	w2.Set(2, 0,  7.20927857)
-
-	n.weights = []*mat64.Dense{w1, w2}
-
-	b1 := mat64.NewDense(3, 1, nil)
-	b1.Set(0, 0, 1.47931576)
-	b1.Set(1, 0, 5.76116679)
-	b1.Set(2, 0, 4.77665241)
-
-	b2 := mat64.NewDense(1,1,nil)
-	b2.Set(0,0,-7.41086319)
-
-	n.biases = []*mat64.Dense{b1, b2}
-
-	var y *mat64.Dense
-	y = n.forwardFeed(mat64.NewDense(2,1, []float64{0,0}))
-	assert.Equal(t, y.RawMatrix().Data[0], 0.9999900331454943)
-	y = n.forwardFeed(mat64.NewDense(2,1, []float64{1,0}))
-	assert.Equal(t, y.RawMatrix().Data[0], 0.9992529245275563)
-	y = n.forwardFeed(mat64.NewDense(2,1, []float64{0,1}))
-	assert.Equal(t, y.RawMatrix().Data[0], 0.998931751778988)
-	y = n.forwardFeed(mat64.NewDense(2,1, []float64{1,1}))
-	assert.Equal(t, y.RawMatrix().Data[0], 0.002937291674019087)
-}
 
 
 
@@ -68,143 +25,117 @@ func TestForwardFeed(t *testing.T) {
 // a deterministic result initiated as 1's.
 func TestBackProp(t *testing.T) {
 	n := Network{}
-	n.AddLayer(784, Sigmoid, SigmoidPrime)
-	n.AddLayer(30, Sigmoid, SigmoidPrime)
-	n.AddLayer(10, Sigmoid, SigmoidPrime)
-	n.InitNetworkMethods(OutputErrorXEntropy)
+	n.AddLayer(784, Sigmoid, SigmoidPrime, []int{784})
+	n.AddLayer(30, Sigmoid, SigmoidPrime, []int{30})
+	n.AddLayer(10, Sigmoid, SigmoidPrime, []int{10})
+	n.InitNetworkMethods(OutputNeuronError, ValidateArgMaxSlice)
 
 	n.setSizes()
-	n.weights 		= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[:], n.Sizes[1:], oneFunc())
-	n.biases 		= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, oneFunc())
-	n.nablaW 		= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[:], n.Sizes[1:], zeroFunc())
-	n.nablaB 		= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc())
-	n.deltaNablaW	= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[:], n.Sizes[1:], zeroFunc())
-	n.deltaNablaB 	= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc())
-	n.delta 		= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc())
-	n.z 			= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc())
-	n.activations 	= sliceWithGonumDense(len(n.Sizes[:]),  n.Sizes[:], 1, zeroFunc())
-	n.sp 			= sliceWithGonumDense(len(n.Sizes[1:]), n.Sizes[1:], 1, zeroFunc())
-	n.l 			= len(n.Sizes) - 1
+	n.l = len(n.Sizes) - 1
+	n.nCores = 1
+	n.weights = n.cubicMatrix(oneFunc())
+	n.biases = n.squareMatrix(oneFunc())
+	for idx := 0; idx < n.nCores; idx++ {
+		n.delta = append(n.delta, n.squareMatrix(zeroFunc()))
+		n.nablaW = append(n.nablaW, n.cubicMatrix(zeroFunc()))
+		n.nablaB = append(n.nablaB, n.squareMatrix(zeroFunc()))
+		n.z = append(n.z, n.squareMatrix(zeroFunc()))
+		n.activations = append(n.activations, n.squareMatrixFull(zeroFunc()))
 
-	n.miniBatchSize = 2
-	n.n = 4
-	n.hp.eta = 1
-	n.hp.lambda = 5.0
+		n.miniBatchSize = 2
+		n.n = 4
+		n.hp.eta = 1
+		n.hp.lambda = 5.0
 
-	x := make([]float64, 784, 784)
-	x[1] = 1
-	x1 := mat64.NewDense(784, 1, x)
-	y := make([]float64, 10, 10)
-	y[0] = 1
-	y1 := mat64.NewDense(10,1, y)
+		x1 := make([]float64, 784, 784)
+		y1 := make([]float64, 10, 10)
+		y1[0] = 1
+		x1[1] = 1
+		b1 := [][]float64{x1, y1}
 
-	b1 := []*mat64.Dense{x1, y1}
+		x2 := make([]float64, 784, 784)
+		y2 := make([]float64, 10, 10)
+		y2[1] = 1
+		x2[2] = 1
+		b2 := [][]float64{x2, y2}
 
-	x = make([]float64, 784, 784)
-	x[2] = 1
-	x2 := mat64.NewDense(784, 1, x)
-	y = make([]float64, 10, 10)
-	y[1] = 1
-	y2 := mat64.NewDense(10,1, y)
+		x3 := make([]float64, 784, 784)
+		y3 := make([]float64, 10, 10)
+		y3[2] = 1
+		x3[3] = 1
+		b3 := [][]float64{x3, y3}
 
-	b2 := []*mat64.Dense{x2, y2}
+		x4 := make([]float64, 784, 784)
+		y4 := make([]float64, 10, 10)
+		y4[3] = 1
+		x4[4] = 1
+		b4 := [][]float64{x4, y4}
 
-	x = make([]float64, 784, 784)
-	x[3] = 1
-	x3 := mat64.NewDense(784, 1, x)
-	y = make([]float64, 10, 10)
-	y[2] = 1
-	y3 := mat64.NewDense(10,1, y)
+		miniBatchA := [][][]float64{b1, b2}
+		miniBatchB := [][][]float64{b3, b4}
+		miniBatches := [][][][]float64{miniBatchA, miniBatchB}
+		n.data.miniBatches = miniBatches
+		n.updateMiniBatches()
 
-	b3 := []*mat64.Dense{x3, y3}
+		testData, err := plr.ReadFile("testdata/bias1.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	x = make([]float64, 784, 784)
-	x[4] = 1
-	x4 := mat64.NewDense(784, 1, x)
-	y = make([]float64, 10, 10)
-	y[3] = 1
-	y4 := mat64.NewDense(10,1, y)
+		bias1FromPy := plr.PythonFloatListParser(testData)
 
-	b4 := []*mat64.Dense{x4, y4}
+		testData, err = plr.ReadFile("testdata/bias0.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	miniBatchA := [][]*mat64.Dense{b1, b2}
-	miniBatchB := [][]*mat64.Dense{b3, b4}
-	miniBatches := [][][]*mat64.Dense{miniBatchA, miniBatchB}
-	n.data.miniBatches = miniBatches
-	n.updateMiniBatches()
+		bias0FromPy := plr.PythonFloatListParser(testData)
 
-	fmt.Println()
+		testData, err = plr.ReadFile("testdata/weights1.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	testData, err := plr.ReadFile("testdata/bias1.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+		weights1FromPy := plr.PythonNestedFloatListParser(testData)
 
-	bias1FromPy := plr.PythonFloatListParser(testData)
+		testData, err = plr.ReadFile("testdata/weights0.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
 
+		weights0FromPy := plr.PythonNestedFloatListParser(testData)
+		//fmt.Println(len(weights1FromPy))
+		//fmt.Println(len(n.weights[1]))
+		
 
-	testData, err = plr.ReadFile("testdata/bias0.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+		for idx := range bias1FromPy {
+			if bias1FromPy[idx]-n.biases[1][idx] > 1e-7 {
+				t.Error("not equal", bias1FromPy[idx], n.biases[1][idx])
+			}
+		}
 
-	bias0FromPy := plr.PythonFloatListParser(testData)
+		for idx := range bias0FromPy {
+			if bias0FromPy[idx]-n.biases[0][idx] > 1e-7 {
+				t.Error("not equal", bias0FromPy[idx], n.biases[0][idx])
+			}
+		}
 
+		for idx1 := range weights1FromPy {
+			for idx2 := range weights1FromPy[idx1] {
+				if weights1FromPy[idx1][idx2]-n.weights[1][idx1][idx2] > 1e-7 {
+					t.Error("not equal", weights1FromPy[idx1][idx2], n.weights[1][idx1][idx2])
+				}
+			}
+		}
 
-	testData, err = plr.ReadFile("testdata/weights1.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	weights1FromPy := plr.PythonNestedFloatListParser(testData)
-
-
-	testData, err = plr.ReadFile("testdata/weights0.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	weights0FromPy := plr.PythonNestedFloatListParser(testData)
-
-
-	errorMatrix := mat64.NewDense(len(bias1FromPy), 1, nil)
-
-	bias1FromPyDense := mat64.NewDense(len(bias1FromPy), 1, bias1FromPy)
-	errorMatrix.Sub(bias1FromPyDense, n.biases[1])
-
-	if mat64.Norm(errorMatrix, 2) > 1e-20 {
-		t.Errorf("Error norm exceeding threshold")
-	}
-
-	errorMatrix = mat64.NewDense(len(bias0FromPy), 1, nil)
-	bias0FromPyDense := mat64.NewDense(len(bias0FromPy), 1, bias0FromPy)
-	errorMatrix.Sub(bias0FromPyDense, n.biases[0])
-
-	if mat64.Norm(errorMatrix, 2) > 1e-20 {
-		t.Errorf("Error norm exceeding threshold")
-	}
-
-	var weights []float64
-	for idx1 := range weights1FromPy {
-		weights = mat64.Col(nil, idx1, n.weights[1])
-		for idx2 := range weights1FromPy[idx1] {
-			if math.Abs(weights[idx2] - weights1FromPy[idx1][idx2]) > 1e-8 {
-				t.Errorf("Not equal enough:", weights[idx2], weights1FromPy[idx1][idx2])
+		for idx1 := range weights0FromPy {
+			for idx2 := range weights0FromPy[idx1] {
+				if weights0FromPy[idx1][idx2]-n.weights[0][idx1][idx2] > 1e-7 {
+					t.Error("not equal", weights0FromPy[idx1][idx2], n.weights[0][idx1][idx2])
+				}
 			}
 		}
 	}
-
-	for idx1 := range weights0FromPy {
-		weights = mat64.Col(nil, idx1, n.weights[0])
-		for idx2 := range weights0FromPy[idx1] {
-			if math.Abs(weights[idx2] - weights0FromPy[idx1][idx2]) > 1e-8 {
-				t.Errorf("Not equal enough:", weights[idx2], weights0FromPy[idx1][idx2])
-			}
-		}
-	}
-
-
-
 }
 
 
